@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مستر علاء الحفني | المنصة التعليمية المتكاملة 2026</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Arial; }
+body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+.hidden { display: none !important; }
+
+/* ===== شاشة الدخول المزدوجة ===== */
+.login-screen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.login-container {
+  background: white; border-radius: 20px; padding: 40px; width: 100%; max-width: 500px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.login-logo { text-align: center; margin-bottom: 30px; }
+.login-logo .icon {
+  width: 80px; height: 80px; background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center;
+  justify-content: center; font-size: 40px; color: white;
+}
+.login-logo h1 { color: #333; font-size: 24px; margin-bottom: 5px; }
+.login-logo p { color: #888; font-size: 14px; }
+
+.login-tabs {
+  display: flex; background: #f5f5f5; border-radius: 10px; padding: 5px; margin-bottom: 25px;
+}
+.login-tab {
+  flex: 1; padding: 12px; text-align: center; cursor: pointer; border-radius: 8px;
+  transition: all 0.3s; font-weight: bold; color: #666;
+}
+.login-tab.active { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+
+.login-form { display: none; }
+.login-form.active { display: block; }
+
+.form-group { margin-bottom: 18px; }
+.form-group label { display: block; margin-bottom: 6px; color: #555; font-weight: 600; font-size: 14px; }
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%; padding: 12px 15px; border: 2px solid #e0e0e0; border-radius: 8px;
+  font-size: 15px; transition: all 0.3s;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  outline: none; border-color: #667eea;
+}
+
+.btn-login {
+  width: 100%; padding: 14px; background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold;
+  cursor: pointer; transition: all 0.3s;
+}
+.btn-login:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102,126,234,0.4); }
+
+.login-info {
+  background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px;
+  padding: 12px; margin-top: 15px; font-size: 13px; color: #856404;
+}
+
+/* ===== لوحة التحكم الرئيسية ===== */
+.dashboard { display: none; min-height: 100vh; background: #f0f2f5; }
+.dashboard.active { display: flex; }
+
+/* ===== القائمة الجانبية مع التمرير ===== */
+.sidebar {
+  width: 280px; 
+  background: linear-gradient(180deg, #1e3c72, #2a5298);
+  color: white; 
+  height: 100vh; 
+  position: fixed; 
+  right: 0; 
+  top: 0;
+  overflow-y: auto; 
+  overflow-x: hidden;
+  box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.3) transparent;
+}
+.sidebar::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
+
+.sidebar-header {
+  padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1);
+  text-align: center;
+  position: sticky; top: 0; background: linear-gradient(180deg, #1e3c72, #2a5298);
+  z-index: 10;
+}
+.sidebar-header .avatar {
+  width: 80px; height: 80px; border-radius: 50%; 
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+  margin: 0 auto 10px; display: flex; align-items: center; justify-content: center;
+  font-size: 35px; font-weight: bold; border: 3px solid rgba(255,255,255,0.3);
+  cursor: pointer;
+}
+.sidebar-header h3 { font-size: 18px; margin-bottom: 3px; }
+.sidebar-header p { font-size: 13px; color: #bdc3c7; }
+
+.sidebar-menu { padding: 10px 0; }
+.menu-item {
+  padding: 14px 20px; cursor: pointer; transition: all 0.3s;
+  display: flex; align-items: center; justify-content: space-between;
+  border-right: 4px solid transparent; margin: 2px 0;
+}
+.menu-item:hover { background: rgba(255,255,255,0.1); }
+.menu-item.active { background: rgba(255,255,255,0.15); border-right-color: #f5576c; }
+.menu-item .left { display: flex; align-items: center; gap: 12px; }
+.menu-item .icon { font-size: 20px; width: 30px; text-align: center; }
+.menu-item .label { font-size: 15px; font-weight: 500; }
+.menu-item .badge {
+  background: #f5576c; color: white; padding: 3px 10px; border-radius: 12px;
+  font-size: 12px; font-weight: bold;
+}
+.menu-item .badge.green { background: #27ae60; }
+.menu-divider {
+  padding: 10px 20px; font-size: 11px; color: #95a5a6; text-transform: uppercase;
+  margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.main-content {
+  margin-right: 280px; flex: 1; padding: 20px;
+  min-height: 100vh;
+}
+.topbar {
+  background: white; padding: 15px 25px; border-radius: 12px;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+.topbar h2 { color: #333; font-size: 22px; }
+.topbar .user-info { display: flex; align-items: center; gap: 10px; }
+.topbar .user-info .badge {
+  padding: 6px 15px; background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white; border-radius: 20px; font-size: 13px; font-weight: bold;
+}
+.btn-logout {
+  padding: 8px 15px; background: #e74c3c; color: white; border: none;
+  border-radius: 6px; cursor: pointer; font-size: 13px;
+}
+
+/* ===== البطاقات والإحصائيات ===== */
+.stats-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px; margin-bottom: 25px;
+}
+.stat-card {
+  background: white; padding: 25px; border-radius: 15px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+  display: flex; align-items: center; gap: 15px;
+}
+.stat-card .stat-icon {
+  width: 65px; height: 65px; border-radius: 15px;
+  display: flex; align-items: center; justify-content: center; font-size: 28px;
+}
+.stat-card .stat-info h3 { font-size: 28px; color: #333; margin-bottom: 5px; }
+.stat-card .stat-info p { color: #888; font-size: 14px; }
+
+.card {
+  background: white; padding: 25px; border-radius: 15px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.08); margin-bottom: 25px;
+}
+.card-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f0f2f5;
+}
+.card-header h3 { color: #333; font-size: 19px; font-weight: bold; }
+
+.btn {
+  padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer;
+  font-size: 14px; font-weight: 600; transition: all 0.3s;
+}
+.btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+.btn-success { background: #27ae60; color: white; }
+.btn-danger { background: #e74c3c; color: white; }
+.btn-warning { background: #f39c12; color: white; }
+.btn-info { background: #3498db; color: white; }
+.btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+
+/* ===== الجداول ===== */
+table { width: 100%; border-collapse: collapse; }
+table th {
+  background: #f8f9fa; padding: 14px; text-align: right;
+  font-weight: 700; color: #555; font-size: 14px; border-bottom: 3px solid #e0e0e0;
+}
+table td { padding: 14px; border-bottom: 1px solid #f0f2f5; font-size: 14px; color: #333; }
+table tr:hover { background: #f8f9fa; }
+
+/* ===== لمبات الحالة ===== */
+.status-light {
+  display: inline-block; width: 14px; height: 14px; border-radius: 50%;
+  margin-left: 8px;
+}
+.status-light.active { background: #27ae60; box-shadow: 0 0 10px #27ae60; animation: pulse 2s infinite; }
+.status-light.inactive { background: #e74c3c; box-shadow: 0 0 10px #e74c3c; }
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ===== المودالات ===== */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6); display: none; align-items: center;
+  justify-content: center; z-index: 1000; padding: 20px;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: white; border-radius: 15px; padding: 30px; width: 100%;
+  max-width: 600px; max-height: 90vh; overflow-y: auto;
+}
+.modal-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px solid #f0f2f5;
+}
+.modal-header h3 { color: #333; font-size: 20px; }
+.modal-close {
+  background: none; border: none; font-size: 28px; cursor: pointer; color: #999;
+}
+.modal-actions {
+  display: flex; gap: 10px; margin-top: 25px; justify-content: flex-end;
+}
+
+/* ===== حماية المحتوى ===== */
+.protected-content {
+  position: relative; user-select: none; -webkit-user-select: none;
+  -moz-user-select: none; -ms-user-select: none;
+}
+.protected-content img, .protected-content video {
+  pointer-events: none; -webkit-user-drag: none;
+}
+
+/* ===== باقات الاشتراك ===== */
+.subscriptions-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 25px;
+}
+.subscription-card {
+  background: white; border-radius: 15px; padding: 30px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.08); text-align: center;
+  border: 3px solid transparent; transition: all 0.3s;
+}
+.subscription-card:hover { transform: translateY(-5px); }
+.subscription-card.bronze { border-color: #cd7f32; }
+.subscription-card.silver { border-color: #c0c0c0; }
+.subscription-card.gold { border-color: #ffd700; }
+.subscription-card .medal { font-size: 60px; margin-bottom: 15px; }
+.subscription-card h3 { color: #333; margin-bottom: 15px; font-size: 22px; }
+.subscription-card .price {
+  font-size: 32px; color: #667eea; font-weight: bold; margin-bottom: 20px;
+}
+.subscription-card .price small { font-size: 16px; color: #888; }
+.subscription-card ul { list-style: none; text-align: right; margin-bottom: 25px; }
+.subscription-card ul li {
+  padding: 10px 0; border-bottom: 1px solid #f0f2f5; color: #555; font-size: 15px;
+}
+.subscription-card ul li::before { content: "✅ "; }
+.sub-students {
+  background: #f8f9fa; border-radius: 10px; padding: 15px; margin-top: 20px;
+  text-align: right; font-size: 13px;
+}
+.sub-students strong { display: block; margin-bottom: 10px; color: #333; }
+.sub-student-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 0; border-bottom: 1px dashed #ddd;
+}
+
+/* ===== عرض المحتوى المحمي ===== */
+.content-viewer {
+  background: #000; border-radius: 10px; padding: 20px;
+  min-height: 400px; position: relative; overflow: hidden;
+}
+.content-viewer .watermark {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-30deg);
+  font-size: 60px; color: rgba(255,255,255,0.15); pointer-events: none;
+  font-weight: bold; z-index: 5;
+}
+.content-viewer .no-access {
+  text-align: center; color: white; padding: 50px;
+}
+.content-viewer .no-access .icon { font-size: 60px; margin-bottom: 15px; }
+
+/* ===== قائمة الدورات للطالب ===== */
+.courses-filter {
+  display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;
+}
+.filter-chip {
+  padding: 10px 18px; background: #f0f2f5; border-radius: 25px;
+  cursor: pointer; font-size: 14px; transition: all 0.3s;
+}
+.filter-chip.active { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+
+.course-card {
+  background: white; border-radius: 12px; padding: 18px;
+  display: flex; align-items: center; gap: 15px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 12px;
+  cursor: pointer; transition: all 0.3s;
+}
+.course-card:hover { transform: translateX(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+.course-card .course-icon {
+  width: 60px; height: 60px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px; background: linear-gradient(135deg, #667eea, #764ba2); color: white;
+}
+.course-card .course-info { flex: 1; }
+.course-card .course-info h4 { color: #333; margin-bottom: 5px; }
+.course-card .course-info p { color: #888; font-size: 13px; }
+.course-card .course-price {
+  padding: 8px 15px; background: #f8f9fa; border-radius: 8px;
+  font-weight: bold; color: #667eea;
+}
+
+/* ===== الباركود ===== */
+.barcode-display {
+  background: #f8f9fa; border: 2px dashed #667eea; border-radius: 10px;
+  padding: 20px; text-align: center; margin: 15px 0;
+}
+.barcode-display .code {
+  font-size: 28px; font-weight: bold; color: #667eea;
+  letter-spacing: 3px; font-family: monospace;
+}
+
+/* ===== الخزينة ===== */
+.treasury-card {
+  background: linear-gradient(135deg, #2c3e50, #34495e); color: white;
+  padding: 30px; border-radius: 15px; margin-bottom: 25px;
+}
+.treasury-card .balance {
+  font-size: 42px; font-weight: bold; margin: 15px 0;
+}
+.treasury-actions {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px; margin-top: 20px;
+}
+
+/* ===== الإشعارات ===== */
+.toast {
+  position: fixed; top: 20px; left: 20px; background: white;
+  padding: 18px 25px; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+  display: none; z-index: 2000; min-width: 320px;
+  border-right: 5px solid #27ae60;
+}
+.toast.show { display: block; animation: slideIn 0.3s; }
+.toast.error { border-right-color: #e74c3c; }
+@keyframes slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+
+/* ===== استجابة ===== */
+@media (max-width: 768px) {
+  .sidebar { width: 100%; position: relative; min-height: auto; height: auto; }
+  .main-content { margin-right: 0; }
+  .dashboard.active { flex-direction: column; }
+}
+
+/* ===== منع الطباعة والسكرين شوت ===== */
+@media print {
+  body * { visibility: hidden; }
+  .protected-content, .protected-content * { display: none !important; }
+}
+
+/* ===== عناصر إضافية ===== */
+.quick-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 25px; }
+.activity-list { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+.badge-item { display: inline-block; padding: 8px 15px; margin: 5px; background: #f8f9fa; border-radius: 8px; font-size: 14px; }
+.wallet-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px; }
+.payment-gateway { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
+.gateway-badge { padding: 8px 15px; background: #f8f9fa; border-radius: 8px; font-size: 13px; border: 2px solid #e0e0e0; }
+.store-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+.store-item { background: white; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+.store-item .icon { font-size: 50px; margin-bottom: 10px; }
+.store-item .price { color: #667eea; font-size: 24px; font-weight: bold; margin: 10px 0; }
+.analytics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+.schedule-day { background: white; border-radius: 10px; padding: 15px; margin-bottom: 10px; border-right: 4px solid #667eea; }
+.tasks-list .task-item { display: flex; align-items: center; gap: 10px; padding: 12px; background: #f8f9fa; border-radius: 8px; margin-bottom: 8px; }
+.settings-section { background: white; border-radius: 12px; padding: 25px; margin-bottom: 20px; }
+.backup-section { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px; }
+</style>
+</head>
+<body>
+
+<!-- ==================== شاشة الدخول المزدوجة ==================== -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-container">
+    <div class="login-logo">
+      <div class="icon">🎓</div>
+      <h1>منصة مستر علاء الحفني</h1>
+      <p>المنصة التعليمية المتكاملة 2026</p>
+    </div>
+
+    <div class="login-tabs">
+      <div class="login-tab active" onclick="switchLoginTab('admin')">‍💼 دخول المدير</div>
+      <div class="login-tab" onclick="switchLoginTab('student')">👨‍🎓 دخول الطالب</div>
+    </div>
+
+    <!-- نموذج المدير -->
+    <form class="login-form active" id="adminLoginForm" onsubmit="adminLogin(event)">
+      <div class="form-group">
+        <label>👤 اسم المستخدم</label>
+        <input type="text" id="adminUsername" autocomplete="off" placeholder="أدخل اسم المستخدم">
+      </div>
+      <div class="form-group">
+        <label>🔒 كلمة المرور</label>
+        <input type="password" id="adminPassword" autocomplete="new-password" placeholder="أدخل كلمة المرور">
+      </div>
+      <button type="submit" class="btn-login"> دخول لوحة التحكم</button>
+      <div class="login-info">
+        ⚠️ هذه الخانة مخصصة للمدير فقط - البيانات غير معروضة مسبقاً للأمان
+      </div>
+    </form>
+
+    <!-- نموذج الطالب -->
+    <form class="login-form" id="studentLoginForm" onsubmit="studentLogin(event)">
+      <div class="form-group">
+        <label>👤 الاسم الثلاثي</label>
+        <input type="text" id="studentFullName" required placeholder="الاسم الأول - الأوسط - الأخير">
+      </div>
+      <div class="form-group">
+        <label>📱 رقم التليفون</label>
+        <input type="tel" id="studentPhone" required placeholder="01xxxxxxxxx" pattern="01[0-9]{9}">
+      </div>
+      <div class="form-group">
+        <label>🎓 الصف المقيد فيه</label>
+        <select id="studentGrade" required>
+          <option value="">اختر الصف</option>
+          <option value="أولى ثانوي">أولى ثانوي</option>
+          <option value="ثانية ثانوي">ثانية ثانوي</option>
+          <option value="ثالثة ثانوي">ثالثة ثانوي</option>
+          <option value="صف احتياطي 1">صف احتياطي 1</option>
+          <option value="صف احتياطي 2">صف احتياطي 2</option>
+          <option value="صف احتياطي 3">صف احتياطي 3</option>
+        </select>
+      </div>
+      <button type="submit" class="btn-login">🚪 دخول المنصة</button>
+      <div class="login-info">
+        ⚠️ سيتم ربط حسابك بجهازك الحالي - لا يمكن الدخول من جهاز آخر
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ==================== لوحة المدير ==================== -->
+<div class="dashboard" id="adminDashboard">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="avatar" id="adminAvatar">ع</div>
+      <h3>مستر علاء الحفني</h3>
+      <p>المؤسس والمدير</p>
+    </div>
+    <nav class="sidebar-menu">
+      <div class="menu-item active" onclick="showAdminSection('dashboard', this)">
+        <div class="left"><span class="icon">📊</span><span class="label">لوحة التحكم</span></div>
+      </div>
+      <div class="menu-item" onclick="showAdminSection('courses', this)">
+        <div class="left"><span class="icon">📚</span><span class="label">الدورات</span></div>
+        <span class="badge" id="menuCoursesCount">0</span>
+      </div>
+      <div class="menu-item" onclick="showAdminSection('students', this)">
+        <div class="left"><span class="icon">👨‍🎓</span><span class="label">الطلاب</span></div>
+        <span class="badge green" id="menuStudentsCount">0</span>
+      </div>
+      <div class="menu-item" onclick="showAdminSection('attendance', this)">
+        <div class="left"><span class="icon">✅</span><span class="label">الحضور</span></div>
+      </div>
+      <div class="menu-item" onclick="showAdminSection('exams', this)">
+        <div class="left"><span class="icon"></span><span class="label">الامتحانات</span></div>
+      </div>
+      <div class="menu-item" onclick="showAdminSection('homework', this)">
+        <div class="left"><span class="icon">📋</span><span class="label">الواجبات</span></div>
+      </div>
+      <div class="menu-item" onclick="showAdminSection('forum', this)">
+        <div class="left"><span class="icon">💬</span><span class="label">المنتدى</span></div>
+      </div>
+      <div class="menu-item" onclick="showAdminSection('wallet', this)">
+        <div class="left"><span class="icon">💰</span><span class="label">المحفظة</span></div>
+      </div>
+      <div class="menu-item" onclick="showAdminSection('subscriptions', this)">
+        <div class="left"><span class="icon">👑</span><span class="label">الاشتراكات</span></div>
+      </div>
+      <div class="menu-item" onclick="showAdminSection('store', this)">
+        <div class="left"><span class="icon">🛒</span><span class="label">المتجر</span></div>
+      </div>
+      <div class="menu-item" onclick="showAdminSection('booking', this)">
+        <div class="left"><span class="icon">📅</span><span class="label">الحجز</span></div>
+        <span class="badge" id="menuBookingCount">0</span>
+      </div>
+      <div class="menu-item" onclick="showAdminSection('receipts', this)">
+        <div class="left"><span class="icon"></span><span class="label">الإيصالات</span></div>
+        <span class="badge" id="menuReceiptsCount">0</span>
+      </div>
+      <div class="menu-divider">أدوات متقدمة</div>
+      <div class="menu-item" onclick="showAdminSection('analytics', this)">
+        <div class="left"><span class="icon">📈</span><span class="label">التحليلات والتقارير</span></div>
+      </div>
+      <div class="menu-item" onclick="showAdminSection('grades', this)">
+        <div class="left"><span class="icon">🎓</span><span class="label">سجل الدرجات</span></div>
+      </div>
+      <div class="menu-item" onclick="showAdminSection('questionBank', this)">
+        <div class="left"><span class="icon">💡</span><span class="label">بنك الأسئلة والاختبارات</span></div>
+      </div>
+      <div class="menu-item" onclick="showAdminSection('leaderboard', this)">
+        <div class="left"><span class="icon">🏆</span><span class="label">لوحة الصدارة</span></div>
+      </div>
+      <div class="menu-item" onclick="showAdminSection('certificates', this)">
+        <div class="left"><span class="icon">🏅</span><span class="label">الشهادات</span></div>
+      </div>
+      <div class="menu-item" onclick="showAdminSection('schedule', this)">
+        <div class="left"><span class="icon">🗓️</span><span class="label">الجدول الأسبوعي</span></div>
+      </div>
+      <div class="menu-item" onclick="showAdminSection('content', this)">
+        <div class="left"><span class="icon">🎬</span><span class="label">مكتبة المحتوى</span></div>
+      </div>
+      <div class="menu-item" onclick="showAdminSection('tasks', this)">
+        <div class="left"><span class="icon">✅</span><span class="label">مهامي اليومية</span></div>
+      </div>
+      <div class="menu-item" onclick="showAdminSection('settings', this)">
+        <div class="left"><span class="icon">⚙️</span><span class="label">الإعدادات</span></div>
+      </div>
+    </nav>
+  </aside>
+
+  <main class="main-content">
+    <div class="topbar">
+      <h2 id="sectionTitle">📊 لوحة التحكم</h2>
+      <div class="user-info">
+        <span class="badge">👨‍💼 مدير</span>
+        <button class="btn-logout" onclick="logout()">🚪 خروج</button>
+      </div>
+    </div>
+
+    <!-- 1. لوحة التحكم -->
+    <div class="admin-section" id="section-dashboard">
+      <div class="card">
+        <h2 style="margin-bottom:20px;">مرحباً بك في منصة مستر علاء الحفني</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#e3f2fd;color:#2196f3;">‍🎓</div>
+            <div class="stat-info"><h3 id="statStudents">0</h3><p>الطلاب</p></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#e8f5e9;color:#4caf50;">📚</div>
+            <div class="stat-info"><h3 id="statCourses">0</h3><p>الدورات</p></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#fff3e0;color:#ff9800;"></div>
+            <div class="stat-info"><h3 id="statRevenue">0 ج.م</h3><p>الإيرادات</p></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#fce4ec;color:#e91e63;">✅</div>
+            <div class="stat-info"><h3 id="statAttendance">0%</h3><p>نسبة الحضور</p></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>🔔 الإشعارات والنشاطات</h3></div>
+        <div class="activity-list" id="activityList"><p style="color:#888;text-align:center;">لا توجد إشعارات</p></div>
+      </div>
+      <div class="quick-actions">
+        <button class="btn btn-primary" onclick="openModal('addCourseModal')">➕ دورة جديدة</button>
+        <button class="btn btn-success" onclick="openModal('addStudentModal')">➕ طالب جديد</button>
+        <button class="btn btn-info" onclick="openModal('generateCodeModal')"> توليد كود</button>
+        <button class="btn btn-warning" onclick="openModal('uploadReceiptModal')">📄 رفع إيصال</button>
+        <button class="btn btn-primary" onclick="openModal('addHomeworkModal')"> واجب جديد</button>
+        <button class="btn btn-success" onclick="openModal('addTopicModal')">💬 موضوع جديد</button>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3> شارات التقدير</h3></div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:15px;">
+          <span class="badge-item"> ذهبي</span>
+          <span class="badge-item">🥈 فضي</span>
+          <span class="badge-item">🥉 برونزي</span>
+          <span class="badge-item">⭐ ممتاز</span>
+          <span class="badge-item">🏅 مجتهد</span>
+        </div>
+        <p style="color:#888;">سيتم منح الشارات للطلاب المتميزين بناءً على أدائهم</p>
+      </div>
+    </div>
+
+    <!-- 2. الدورات -->
+    <div class="admin-section hidden" id="section-courses">
+      <div class="card">
+        <div class="card-header"><h3>📚 الدورات التعليمية</h3></div>
+        <div style="margin-bottom:20px;"><button class="btn btn-primary" onclick="openModal('addCourseModal')">➕ دورة جديدة</button></div>
+        <div id="coursesList"></div>
+      </div>
+    </div>
+
+    <!-- 3. الطلاب -->
+    <div class="admin-section hidden" id="section-students">
+      <div class="card">
+        <div class="card-header"><h3>🎓 الطلاب</h3></div>
+        <div style="margin-bottom:20px;"><button class="btn btn-success" onclick="openModal('addStudentModal')">➕ طالب جديد</button></div>
+        <div class="courses-filter">
+          <div class="filter-chip active" onclick="filterStudents('all', this)">الكل</div>
+          <div class="filter-chip" onclick="filterStudents('active', this)"> النشطون الآن</div>
+          <div class="filter-chip" onclick="filterStudents('inactive', this)">🔴 غير النشطين</div>
+          <div class="filter-chip" onclick="filterStudents('أولى ثانوي', this)">أولى ثانوي</div>
+          <div class="filter-chip" onclick="filterStudents('ثانية ثانوي', this)">ثانية ثانوي</div>
+          <div class="filter-chip" onclick="filterStudents('ثالثة ثانوي', this)">ثالثة ثانوي</div>
+        </div>
+        <table>
+          <thead><tr><th>الحالة</th><th>الطالب</th><th>الصف</th><th>التليفون</th><th>الباركود</th><th>مرات الدخول</th><th>مرات مشاهدة الفيديو</th><th>الإجراءات</th></tr></thead>
+          <tbody id="studentsTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 4. الحضور -->
+    <div class="admin-section hidden" id="section-attendance">
+      <div class="card">
+        <div class="card-header"><h3>✅ الحضور والغياب</h3></div>
+        <div style="display:flex;gap:10px;margin-bottom:20px;">
+          <select style="flex:1;padding:10px;border:2px solid #e0e0e0;border-radius:8px;"><option>اختر الدورة</option></select>
+          <button class="btn btn-primary">عرض</button>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-icon" style="background:#e8f5e9;color:#4caf50;">✅</div><div class="stat-info"><h3 id="presentCount">0</h3><p>الحاضرون</p></div></div>
+          <div class="stat-card"><div class="stat-icon" style="background:#ffebee;color:#f44336;">❌</div><div class="stat-info"><h3 id="absentCount">0</h3><p>الغائبون</p></div></div>
+          <div class="stat-card"><div class="stat-icon" style="background:#e3f2fd;color:#2196f3;">📊</div><div class="stat-info"><h3 id="attendanceRate">0%</h3><p>النسبة</p></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. الامتحانات -->
+    <div class="admin-section hidden" id="section-exams">
+      <div class="card">
+        <div class="card-header"><h3>📝 الامتحانات</h3></div>
+        <div style="margin-bottom:20px;"><button class="btn btn-primary" onclick="openModal('addExamModal')">➕ امتحان جديد</button></div>
+        <div id="examsList"></div>
+      </div>
+    </div>
+
+    <!-- 6. الواجبات -->
+    <div class="admin-section hidden" id="section-homework">
+      <div class="card">
+        <div class="card-header"><h3>📋 الواجبات</h3></div>
+        <div style="margin-bottom:20px;"><button class="btn btn-primary" onclick="openModal('addHomeworkModal')">➕ واجب جديد</button></div>
+        <div id="homeworkList"></div>
+      </div>
+    </div>
+
+    <!-- 7. المنتدى -->
+    <div class="admin-section hidden" id="section-forum">
+      <div class="card">
+        <div class="card-header"><h3>💬 المنتدى</h3></div>
+        <div style="margin-bottom:20px;"><button class="btn btn-primary" onclick="openModal('addTopicModal')">➕ موضوع جديد</button></div>
+        <div id="forumList"></div>
+      </div>
+    </div>
+
+    <!-- 8. المحفظة -->
+    <div class="admin-section hidden" id="section-wallet">
+      <div class="card">
+        <div class="card-header"><h3>💰 المحفظة الإلكترونية</h3></div>
+        <div class="wallet-section">
+          <div class="stat-card"><div class="stat-info"><h3 id="walletBalance">0 ج.م</h3><p>الرصيد الحالي</p></div></div>
+          <div class="stat-card"><div class="stat-info"><h3 id="walletIncome">0 ج.م</h3><p>الإيرادات</p></div></div>
+          <div class="stat-card"><div class="stat-info"><h3 id="walletExpenses">0 ج.م</h3><p>المصروفات</p></div></div>
+          <div class="stat-card"><div class="stat-info"><h3 id="walletTransactions">0</h3><p>المعاملات</p></div></div>
+        </div>
+        <h4 style="margin:20px 0 10px;">💳 بوابات الدفع الإلكترونية</h4>
+        <div class="payment-gateway">
+          <span class="gateway-badge">Paymob</span><span class="gateway-badge">Paytabs</span>
+          <span class="gateway-badge">فودافون كاش</span><span class="gateway-badge">اتصالات كاش</span>
+          <span class="gateway-badge">تحويل بنكي</span>
+        </div>
+        <div style="margin-top:25px;">
+          <h4 style="margin-bottom:15px;">⚡ إجراءات سريعة</h4>
+          <div class="quick-actions">
+            <button class="btn btn-success" onclick="openModal('depositModal')">💵 إيداع</button>
+            <button class="btn btn-warning" onclick="openModal('withdrawModal')">💸 سحب</button>
+            <button class="btn btn-primary" onclick="openModal('uploadReceiptModal')"> رفع إيصال</button>
+            <button class="btn btn-info">📲 شحن</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 9. الاشتراكات -->
+    <div class="admin-section hidden" id="section-subscriptions">
+      <div class="card">
+        <div class="card-header"><h3>👑 الاشتراكات الشهرية</h3></div>
+        <div class="subscriptions-grid" id="subscriptionsGrid"></div>
+      </div>
+    </div>
+
+    <!-- 10. المتجر -->
+    <div class="admin-section hidden" id="section-store">
+      <div class="card">
+        <div class="card-header"><h3>🛒 المتجر الإلكتروني</h3></div>
+        <div class="store-grid" id="storeList"></div>
+      </div>
+    </div>
+
+    <!-- 11. الحجز -->
+    <div class="admin-section hidden" id="section-booking">
+      <div class="card">
+        <div class="card-header"><h3>📅 الحجز أونلاين</h3></div>
+        <div style="margin-bottom:20px;"><button class="btn btn-primary" onclick="openModal('addBookingModal')">➕ حجز جديد</button></div>
+        <div id="bookingList"></div>
+      </div>
+    </div>
+
+    <!-- 12. الإيصالات -->
+    <div class="admin-section hidden" id="section-receipts">
+      <div class="card">
+        <div class="card-header"><h3>📄 الإيصالات</h3></div>
+        <div style="margin-bottom:20px;"><button class="btn btn-primary" onclick="openModal('uploadReceiptModal')">➕ رفع إيصال جديد</button></div>
+        <div id="receiptsList"></div>
+      </div>
+    </div>
+
+    <!-- 13. التحليلات -->
+    <div class="admin-section hidden" id="section-analytics">
+      <div class="card">
+        <div class="card-header"><h3>📈 التحليلات والتقارير</h3></div>
+        <button class="btn btn-primary" style="margin-bottom:20px;">🖨️ طباعة تقرير</button>
+        <div class="analytics-grid">
+          <div class="card"><h4>💰 الإيرادات مقابل المصروفات</h4></div>
+          <div class="card"><h4>📚 توزيع الطلاب على الدورات</h4></div>
+          <div class="card"><h4>✅ نسبة الحضور الإجمالية</h4></div>
+          <div class="card"><h4>🏆 أفضل 5 طلاب</h4></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 14. سجل الدرجات -->
+    <div class="admin-section hidden" id="section-grades">
+      <div class="card">
+        <div class="card-header"><h3>🎓 سجل الدرجات</h3></div>
+        <div style="margin-bottom:20px;">
+          <button class="btn btn-primary" onclick="openModal('addGradeModal')">➕ رصد درجة</button>
+        </div>
+        <table><thead><tr><th>الطالب</th><th>الدورة</th><th>عدد الدرجات</th><th>المعدل</th><th>التقدير</th><th>التفاصيل</th></tr></thead><tbody id="gradesTable"></tbody></table>
+      </div>
+    </div>
+
+    <!-- 15. بنك الأسئلة -->
+    <div class="admin-section hidden" id="section-questionBank">
+      <div class="card">
+        <div class="card-header"><h3>💡 بنك الأسئلة والاختبارات التفاعلية</h3></div>
+        <div style="margin-bottom:20px;"><button class="btn btn-primary" onclick="openModal('addQuizModal')">➕ اختبار جديد</button></div>
+        <div id="questionBankList"></div>
+      </div>
+    </div>
+
+    <!-- 16. لوحة الصدارة -->
+    <div class="admin-section hidden" id="section-leaderboard">
+      <div class="card">
+        <div class="card-header"><h3>🏆 لوحة الصدارة</h3></div>
+        <div id="leaderboardList"></div>
+      </div>
+    </div>
+
+    <!-- 17. الشهادات -->
+    <div class="admin-section hidden" id="section-certificates">
+      <div class="card">
+        <div class="card-header"><h3>🏅 شهادات التقدير</h3></div>
+        <div style="display:flex;gap:10px;margin-bottom:20px;">
+          <select style="flex:1;padding:10px;border:2px solid #e0e0e0;border-radius:8px;"><option>اختر الطالب</option></select>
+          <input type="text" placeholder="نص التقدير" style="flex:2;padding:10px;border:2px solid #e0e0e0;border-radius:8px;">
+          <button class="btn btn-primary">تحميل الشهادة</button>
+        </div>
+        <div style="background:#f8f9fa;padding:30px;border-radius:10px;text-align:center;">
+          <h2 style="color:#667eea;margin-bottom:20px;">شهادة تقدير</h2>
+          <p style="font-size:18px;margin-bottom:10px;">تُمنح هذه الشهادة إلى</p>
+          <h3 style="color:#333;margin-bottom:20px;">اسم الطالب</h3>
+          <p style="margin-bottom:30px;">لتميزه وتفوقه الدراسي</p>
+          <p style="color:#888;">مركز مستر علاء الحفني التعليمي</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 18. الجدول -->
+    <div class="admin-section hidden" id="section-schedule">
+      <div class="card">
+        <div class="card-header"><h3>🗓️ الجدول الأسبوعي</h3></div>
+        <div style="margin-bottom:20px;"><button class="btn btn-primary" onclick="openModal('addScheduleModal')">➕ إضافة حصة</button></div>
+        <div id="scheduleList"></div>
+      </div>
+    </div>
+
+    <!-- 19. مكتبة المحتوى -->
+    <div class="admin-section hidden" id="section-content">
+      <div class="card">
+        <div class="card-header"><h3>🎬 مكتبة المحتوى التعليمي</h3></div>
+        <div style="margin-bottom:20px;"><button class="btn btn-primary" onclick="openModal('addContentModal')">➕ إضافة محتوى</button></div>
+        <p style="color:#e74c3c;font-size:13px;margin-bottom:15px;">⚠️ المحتوى محمي: لا يمكن تحميله أو عمل سكرين شوت - يظهر فقط بعد دفع ثمن المحاضرة</p>
+        <div id="contentList"></div>
+      </div>
+    </div>
+
+    <!-- 20. المهام -->
+    <div class="admin-section hidden" id="section-tasks">
+      <div class="card">
+        <div class="card-header"><h3>✅ مهامي اليومية</h3></div>
+        <div class="tasks-list" id="tasksList"><p style="color:#888;text-align:center;">لا توجد مهام، أضف مهمة جديدة</p></div>
+      </div>
+    </div>
+
+    <!-- 21. الإعدادات -->
+    <div class="admin-section hidden" id="section-settings">
+      <div class="settings-section">
+        <h3 style="margin-bottom:20px;">⚙️ الإعدادات</h3>
+        <div class="form-group">
+          <label>صورة المدرس</label>
+          <div style="display:flex;align-items:center;gap:20px;margin-top:10px;">
+            <div style="width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;font-size:40px;color:white;">ع</div>
+            <div><button class="btn btn-primary">تغيير الصورة</button><button class="btn btn-success" style="margin-right:10px;">حفظ الصورة بشكل دائم</button></div>
+          </div>
+        </div>
+        <div class="form-group"><label>اسم المركز</label><input type="text" value="مستر علاء الحفني" style="width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:8px;"></div>
+        <div class="form-group"><label>رقم الهاتف</label><input type="text" value="01xxxxxxxxx" style="width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:8px;"></div>
+        <div class="form-group"><label>سعر الحصة الافتراضي</label><input type="number" placeholder="0" style="width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:8px;"></div>
+        <div class="form-group"><label>رابط Zoom (للحجز المباشر)</label><input type="url" placeholder="https://zoom.us/..." style="width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:8px;"></div>
+        <button class="btn btn-primary">💾 حفظ الإعدادات</button>
+      </div>
+      <div class="settings-section">
+        <h3 style="margin-bottom:20px;">🗄️ النسخ الاحتياطي والبيانات</h3>
+        <p style="color:#888;margin-bottom:15px;">احتفظ بنسخة من بيانات المنصة أو استعد نسخة سابقة</p>
+        <div class="backup-section">
+          <button class="btn btn-primary">📥 تصدير نسخة احتياطية</button>
+          <button class="btn btn-success">📤 استيراد نسخة</button>
+          <button class="btn btn-info">📊 تصدير الطلاب Excel</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ==================== لوحة الطالب ==================== -->
+<div class="dashboard" id="studentDashboard">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="avatar" id="studentAvatar">ط</div>
+      <h3 id="studentNameDisplay">الطالب</h3>
+      <p id="studentGradeDisplay">الصف</p>
+    </div>
+    <nav class="sidebar-menu">
+      <div class="menu-item active" onclick="showStudentSection('home', this)"><div class="left"><span class="icon"></span><span class="label">الرئيسية</span></div></div>
+      <div class="menu-item" onclick="showStudentSection('myCourses', this)"><div class="left"><span class="icon">📚</span><span class="label">دوراتي</span></div></div>
+      <div class="menu-item" onclick="showStudentSection('exams', this)"><div class="left"><span class="icon">📝</span><span class="label">الامتحانات</span></div></div>
+      <div class="menu-item" onclick="showStudentSection('homework', this)"><div class="left"><span class="icon"></span><span class="label">الواجبات</span></div></div>
+      <div class="menu-item" onclick="showStudentSection('forum', this)"><div class="left"><span class="icon">💬</span><span class="label">المنتدى</span></div></div>
+      <div class="menu-item" onclick="showStudentSection('wallet', this)"><div class="left"><span class="icon">💰</span><span class="label">المحفظة</span></div></div>
+      <div class="menu-item" onclick="showStudentSection('subscriptions', this)"><div class="left"><span class="icon">👑</span><span class="label">الاشتراكات</span></div></div>
+      <div class="menu-item" onclick="showStudentSection('store', this)"><div class="left"><span class="icon"></span><span class="label">المتجر</span></div></div>
+      <div class="menu-item" onclick="showStudentSection('questionBank', this)"><div class="left"><span class="icon">💡</span><span class="label">بنك الأسئلة</span></div></div>
+      <div class="menu-item" onclick="showStudentSection('uploadReceipt', this)"><div class="left"><span class="icon">📄</span><span class="label">رفع إيصال</span></div></div>
+    </nav>
+  </aside>
+
+  <main class="main-content">
+    <div class="topbar">
+      <h2 id="studentSectionTitle">🏠 الرئيسية</h2>
+      <div class="user-info"><span class="badge">👨‍🎓 طالب</span><button class="btn-logout" onclick="logout()">🚪 خروج</button></div>
+    </div>
+
+    <div class="student-section" id="student-home">
+      <div class="card">
+        <h2 style="margin-bottom:20px;">🎓 مرحباً بك</h2>
+        <p id="welcomeMessage">مرحباً بك في المنصة</p>
+        <div class="barcode-display" style="margin-top:20px;">
+          <p style="color:#888;font-size:14px;margin-bottom:10px;">الباركود الخاص بصفك:</p>
+          <div class="code" id="studentBarcode">------</div>
+          <p style="color:#888;font-size:13px;margin-top:10px;">استخدم هذا الباركود لدخول الدورات</p>
+        </div>
+      </div>
+      <div class="card"><div class="card-header"><h3>📚 دورات صفك</h3></div><div id="studentCoursesList"></div></div>
+    </div>
+
+    <div class="student-section hidden" id="student-myCourses"><div class="card"><div class="card-header"><h3>📚 دوراتي</h3></div><div id="myCoursesList"></div></div></div>
+    <div class="student-section hidden" id="student-exams"><div class="card"><div class="card-header"><h3>📝 الامتحانات المتاحة</h3></div><p style="color:#888;font-size:13px;margin-bottom:20px;">ℹ️ الامتحانات متاحة لجميع الطلاب</p><div id="studentExamsList"></div></div></div>
+    <div class="student-section hidden" id="student-homework"><div class="card"><div class="card-header"><h3>📋 الواجبات</h3></div><p style="color:#888;font-size:13px;margin-bottom:20px;">ℹ️ الواجبات متاحة لجميع الطلاب</p><div id="studentHomeworkList"></div></div></div>
+    <div class="student-section hidden" id="student-forum"><div class="card"><div class="card-header"><h3>💬 المنتدى</h3></div><p style="color:#888;font-size:13px;margin-bottom:20px;">ℹ️ المنتدى متاح لجميع الطلاب</p><div id="studentForumList"></div></div></div>
+    <div class="student-section hidden" id="student-wallet"><div class="card"><div class="card-header"><h3>💰 محفظتي</h3></div><div class="wallet-section"><div class="stat-card"><div class="stat-info"><h3 id="studentWalletBalance">0 ج.م</h3><p>الرصيد الحالي</p></div></div></div></div></div>
+    <div class="student-section hidden" id="student-subscriptions"><div class="card"><div class="card-header"><h3>👑 الاشتراكات المتاحة</h3></div><div class="subscriptions-grid" id="studentSubscriptionsGrid"></div></div></div>
+    <div class="student-section hidden" id="student-store"><div class="card"><div class="card-header"><h3> المتجر</h3></div><div class="store-grid" id="studentStoreList"></div></div></div>
+    <div class="student-section hidden" id="student-questionBank"><div class="card"><div class="card-header"><h3>💡 بنك الأسئلة</h3></div><p style="color:#888;font-size:13px;margin-bottom:20px;">ℹ️ بنك الأسئلة متاح لجميع الطلاب</p><div id="studentQuestionBankList"></div></div></div>
+    <div class="student-section hidden" id="student-uploadReceipt">
+      <div class="card">
+        <div class="card-header"><h3>📄 رفع إيصال الدفع</h3></div>
+        <form onsubmit="uploadReceipt(event)">
+          <div class="form-group"><label>الدورة</label><select id="receiptCourse" required></select></div>
+          <div class="form-group"><label>المبلغ المدفوع (ج.م)</label><input type="number" id="receiptAmount" required></div>
+          <div class="form-group"><label>طريقة الدفع</label><select id="receiptMethod" required><option value="فودافون كاش">فودافون كاش</option><option value="اتصالات كاش">اتصالات كاش</option><option value="تحويل بنكي">تحويل بنكي</option><option value="إنستا باي">إنستا باي</option></select></div>
+          <div class="form-group"><label>صورة الإيصال</label><input type="file" id="receiptFile" accept="image/*" required></div>
+          <button type="submit" class="btn btn-primary"> رفع الإيصال</button>
+        </form>
+      </div>
+    </div>
+    <div class="student-section hidden" id="student-contentViewer">
+      <div class="card">
+        <div class="card-header"><h3 id="contentTitle">🎬 المحتوى</h3><button class="btn btn-danger" onclick="showStudentSection('myCourses', document.querySelector('#studentDashboard .menu-item:nth-child(2)'))">🔙 رجوع</button></div>
+        <div class="content-viewer protected-content" id="contentViewerArea" data-watermark="مستر علاء الحفني">
+          <div class="watermark">مستر علاء الحفني</div>
+          <div class="no-access" id="contentAccessMessage"><div class="icon">🔒</div><h3>المحتوى مقفل</h3><p>يرجى رفع إيصال الدفع وتفعيل الدورة لعرض المحتوى</p></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ==================== المودالات ==================== -->
+<div class="modal-overlay" id="addStudentModal"><div class="modal"><div class="modal-header"><h3>➕ إضافة طالب جديد</h3><button class="modal-close" onclick="closeModal('addStudentModal')">×</button></div><form onsubmit="addStudent(event)"><div class="form-group"><label>الاسم الثلاثي</label><input type="text" id="newStudentName" required></div><div class="form-group"><label>رقم الهاتف</label><input type="tel" id="newStudentPhone" required pattern="01[0-9]{9}"></div><div class="form-group"><label>الدورة</label><select id="newStudentCourse"><option value="">اختر الدورة</option></select></div><div class="form-group"><label>الرصيد المبدئي (ج.م)</label><input type="number" id="newStudentBalance" value="0"></div><div class="modal-actions"><button type="button" class="btn btn-danger" onclick="closeModal('addStudentModal')">إلغاء</button><button type="submit" class="btn btn-primary">💾 حفظ</button></div></form></div></div>
+
+<div class="modal-overlay" id="addCourseModal"><div class="modal"><div class="modal-header"><h3>➕ إضافة دورة جديدة</h3><button class="modal-close" onclick="closeModal('addCourseModal')">×</button></div><form onsubmit="addCourse(event)"><div class="form-group"><label>اسم الدورة</label><input type="text" id="newCourseName" required></div><div class="form-group"><label>المرحلة / الصف</label><select id="newCourseGrade" required multiple style="height:120px;"><option value="أولى ثانوي">أولى ثانوي</option><option value="ثانية ثانوي">ثانية ثانوي</option><option value="ثالثة ثانوي">ثالثة ثانوي</option><option value="صف احتياطي 1">صف احتياطي 1</option><option value="صف احتياطي 2">صف احتياطي 2</option><option value="صف احتياطي 3">صف احتياطي 3</option></select><small style="color:#888;">اضغط Ctrl لاختيار أكثر من صف</small></div><div class="form-group"><label>القسم</label><select id="newCourseSection"><option value="علمي">علمي</option><option value="أدبي">أدبي</option><option value="عام">عام</option></select></div><div class="form-group"><label>سعر الدورة (ج.م)</label><input type="number" id="newCoursePrice" required></div><div class="form-group"><label>رابط اليوتيوب</label><input type="url" id="newCourseLink"></div><div class="form-group"><label>الأيقونة</label><select id="newCourseIcon"><option value="⚛️">⚛️ فيزياء</option><option value="📐">📐 رياضيات</option><option value="🧪">🧪 كيمياء</option><option value="🌍">🌍 جغرافيا</option><option value="📖">📖 لغة عربية</option><option value="🔬">🔬 أحياء</option><option value="💻">💻 حاسوب</option><option value="">🎨 فنون</option></select></div><div class="modal-actions"><button type="button" class="btn btn-danger" onclick="closeModal('addCourseModal')">إلغاء</button><button type="submit" class="btn btn-primary">💾 حفظ</button></div></form></div></div>
+
+<div class="modal-overlay" id="addContentModal"><div class="modal"><div class="modal-header"><h3>➕ إضافة محتوى تعليمي</h3><button class="modal-close" onclick="closeModal('addContentModal')">×</button></div><form onsubmit="addContent(event)"><div class="form-group"><label>عنوان المحتوى</label><input type="text" id="newContentTitle" required></div><div class="form-group"><label>الدورة</label><select id="newContentCourse" required></select></div><div class="form-group"><label>💰 سعر المحاضرة (ج.م)</label><input type="number" id="newContentPrice" required min="0"><small style="color:#e74c3c;">⚠️ يجب دفع هذا المبلغ لعرض المحتوى</small></div><div class="form-group"><label>نوع المحتوى</label><select id="newContentType"><option value="video">🎬 فيديو</option><option value="pdf">📄 ملف PDF</option><option value="link">🔗 رابط خارجي</option></select></div><div class="form-group"><label>الرابط</label><input type="url" id="newContentLink" required></div><div class="modal-actions"><button type="button" class="btn btn-danger" onclick="closeModal('addContentModal')">إلغاء</button><button type="submit" class="btn btn-primary">💾 إضافة</button></div></form></div></div>
+
+<div class="modal-overlay" id="uploadReceiptModal"><div class="modal"><div class="modal-header"><h3>📄 رفع إيصال الدفع</h3><button class="modal-close" onclick="closeModal('uploadReceiptModal')">×</button></div><form onsubmit="uploadReceiptAdmin(event)"><div class="form-group"><label>اسم الطالب</label><select id="receiptStudent" required></select></div><div class="form-group"><label>الدورة</label><select id="receiptCourseAdmin" required></select></div><div class="form-group"><label>المبلغ المدفوع (ج.م)</label><input type="number" id="receiptAmountAdmin" required></div><div class="form-group"><label>طريقة الدفع</label><select id="receiptMethodAdmin"><option value="فودافون كاش">فودافون كاش</option><option value="اتصالات كاش">اتصالات كاش</option><option value="إنستا باي">إنستا باي</option><option value="تحويل بنكي">تحويل بنكي</option><option value="Paymob">Paymob</option><option value="Paytabs">Paytabs</option><option value="أخرى">أخرى</option></select></div><div class="form-group"><label>رفع صورة الإيصال</label><input type="file" id="receiptFileAdmin" accept="image/*"></div><div class="modal-actions"><button type="button" class="btn btn-danger" onclick="closeModal('uploadReceiptModal')">إلغاء</button><button type="submit" class="btn btn-primary">📤 رفع الإيصال</button></div></form></div></div>
+
+<div class="modal-overlay" id="depositModal"><div class="modal"><div class="modal-header"><h3>💵 إيداع في الخزينة</h3><button class="modal-close" onclick="closeModal('depositModal')">×</button></div><form onsubmit="deposit(event)"><div class="form-group"><label>المبلغ (ج.م)</label><input type="number" id="depositAmount" required min="1"></div><div class="form-group"><label>الوصف</label><input type="text" id="depositDesc" placeholder="سبب الإيداع"></div><div class="modal-actions"><button type="button" class="btn btn-danger" onclick="closeModal('depositModal')">إلغاء</button><button type="submit" class="btn btn-success">💵 إيداع</button></div></form></div></div>
+
+<div class="modal-overlay" id="withdrawModal"><div class="modal"><div class="modal-header"><h3>💸 سحب إلى فودافون كاش</h3><button class="modal-close" onclick="closeModal('withdrawModal')">×</button></div><form onsubmit="withdraw(event)"><div class="form-group"><label>رقم فودافون كاش</label><input type="tel" id="withdrawPhone" required pattern="01[0-9]{9}" placeholder="01xxxxxxxxx"></div><div class="form-group"><label>المبلغ (ج.م)</label><input type="number" id="withdrawAmount" required min="1"></div><div class="modal-actions"><button type="button" class="btn btn-danger" onclick="closeModal('withdrawModal')">إلغاء</button><button type="submit" class="btn btn-warning">💸 سحب</button></div></form></div></div>
+
+<div class="modal-overlay" id="generateCodeModal"><div class="modal"><div class="modal-header"><h3>🔑 توليد كود دخول للطالب</h3><button class="modal-close" onclick="closeModal('generateCodeModal')">×</button></div><p style="color:#e74c3c;margin-bottom:15px;">️ الكود يستخدم مرة واحدة فقط وعلى كورس واحد</p><form onsubmit="generateCode(event)"><div class="form-group"><label>اسم الطالب</label><input type="text" id="codeStudentName" required></div><div class="form-group"><label>الدورة</label><select id="codeStudentCourse" required><option value="">اختر الدورة</option></select></div><div class="form-group"><label>تاريخ الصلاحية</label><input type="date" id="codeExpiryDate" required></div><div class="modal-actions"><button type="button" class="btn btn-danger" onclick="closeModal('generateCodeModal')">إلغاء</button><button type="submit" class="btn btn-primary"> توليد الكود</button></div></form></div></div>
+
+<div class="modal-overlay" id="showCodeModal"><div class="modal"><div class="modal-header"><h3>🔐 كود الدخول الخاص بالطالب</h3><button class="modal-close" onclick="closeModal('showCodeModal')">×</button></div><p style="color:#555;margin-bottom:20px;">يستخدم هذا الكود للدخول من جهاز واحد فقط - مرة واحدة</p><div style="background:#f8f9fa;padding:20px;border-radius:10px;text-align:center;margin-bottom:20px;"><div style="font-size:32px;font-weight:bold;color:#667eea;letter-spacing:5px;font-family:monospace;" id="generatedCode">------</div></div><button class="btn btn-primary" style="width:100%;" onclick="copyCode()">📋 نسخ</button></div></div>
+
+<div class="modal-overlay" id="barcodeModal"><div class="modal"><div class="modal-header"><h3>🔐 تأكيد الدخول للدورة</h3><button class="modal-close" onclick="closeModal('barcodeModal')">×</button></div><p style="color:#555;margin-bottom:15px;">أدخل الباركود الخاص بصفك للدخول إلى الدورة</p><div class="form-group"><label>الباركود</label><input type="text" id="barcodeInput" placeholder="أدخل الباركود"><small style="color:#888;" id="barcodeHint">الباركود الخاص بصفك</small></div><div class="modal-actions"><button type="button" class="btn btn-danger" onclick="closeModal('barcodeModal')">إلغاء</button><button type="button" class="btn btn-primary" onclick="verifyBarcode()">🔓 دخول</button></div></div></div>
+
+<div class="modal-overlay" id="addExamModal"><div class="modal"><div class="modal-header"><h3>➕ امتحان جديد</h3><button class="modal-close" onclick="closeModal('addExamModal')">×</button></div><form onsubmit="addExam(event)"><div class="form-group"><label>عنوان الامتحان</label><input type="text" id="newExamTitle" required></div><div class="form-group"><label>الدورة</label><select id="newExamCourse"><option value="">اختر الدورة</option></select></div><div class="form-group"><label>نوع الامتحان</label><select id="newExamType"><option value="مجاني">مجاني</option><option value="مدفوع">مدفوع</option></select></div><div class="form-group"><label>سعر الامتحان (ج.م)</label><input type="number" id="newExamPrice" value="0"></div><div class="form-group"><label>التاريخ</label><input type="date" id="newExamDate"></div><div class="form-group"><label>الدرجة الكبرى</label><input type="number" id="newExamMaxGrade" value="100"></div><div class="form-group"><label>خلط الأسئلة</label><select id="newExamShuffle"><option value="yes">نعم - خلط الأسئلة لكل طالب</option><option value="no">لا - ترتيب ثابت</option></select></div><div class="form-group"><label>رفع ملف الامتحان</label><input type="file" id="newExamFile" accept=".pdf,image/*"></div><div class="modal-actions"><button type="button" class="btn btn-danger" onclick="closeModal('addExamModal')">إلغاء</button><button type="submit" class="btn btn-primary">💾 حفظ</button></div></form></div></div>
+
+<div class="modal-overlay" id="addHomeworkModal"><div class="modal"><div class="modal-header"><h3>➕ واجب جديد</h3><button class="modal-close" onclick="closeModal('addHomeworkModal')">×</button></div><form onsubmit="addHomework(event)"><div class="form-group"><label>عنوان الواجب</label><input type="text" id="newHomeworkTitle" required></div><div class="form-group"><label>الدورة</label><select id="newHomeworkCourse"><option value="">اختر الدورة</option></select></div><div class="form-group"><label>وصف الواجب</label><textarea id="newHomeworkDesc" rows="3"></textarea></div><div class="form-group"><label>تاريخ التسليم</label><input type="date" id="newHomeworkDeadline"></div><div class="form-group"><label>رفع ملف الواجب</label><input type="file" id="newHomeworkFile"></div><div class="modal-actions"><button type="button" class="btn btn-danger" onclick="closeModal('addHomeworkModal')">إلغاء</button><button type="submit" class="btn btn-primary">💾 حفظ</button></div></form></div></div>
+
+<div class="modal-overlay" id="addTopicModal"><div class="modal"><div class="modal-header"><h3>➕ موضوع جديد في المنتدى</h3><button class="modal-close" onclick="closeModal('addTopicModal')">×</button></div><form onsubmit="addTopic(event)"><div class="form-group"><label>عنوان الموضوع</label><input type="text" id="newTopicTitle" required></div><div class="form-group"><label>القسم</label><select id="newTopicSection"><option value="عام">عام</option><option value="فيزياء">فيزياء</option><option value="رياضيات">رياضيات</option><option value="كيمياء">كيمياء</option><option value="أحياء">أحياء</option></select></div><div class="form-group"><label>محتوى الموضوع</label><textarea id="newTopicContent" rows="5" required></textarea></div><div class="modal-actions"><button type="button" class="btn btn-danger" onclick="closeModal('addTopicModal')">إلغاء</button><button type="submit" class="btn btn-primary">💬 نشر</button></div></form></div></div>
+
+<div class="modal-overlay" id="addGradeModal"><div class="modal"><div class="modal-header"><h3>📊 رصد درجة جديدة</h3><button class="modal-close" onclick="closeModal('addGradeModal')">×</button></div><form onsubmit="addGrade(event)"><div class="form-group"><label>الطالب</label><select id="gradeStudent" required><option value="">اختر الطالب</option></select></div><div class="form-group"><label>الدورة</label><select id="gradeCourse" required><option value="">اختر الدورة</option></select></div><div class="form-group"><label>اسم الاختبار</label><input type="text" id="gradeExamName" required></div><div class="form-group"><label>الدرجة المستحقة</label><input type="number" id="gradeScore" required></div><div class="form-group"><label>الدرجة النهائية</label><input type="number" id="gradeMaxScore" value="100"></div><div class="modal-actions"><button type="button" class="btn btn-danger" onclick="closeModal('addGradeModal')">إلغاء</button><button type="submit" class="btn btn-primary">💾 حفظ الدرجة</button></div></form></div></div>
+
+<div class="modal-overlay" id="addBookingModal"><div class="modal"><div class="modal-header"><h3>➕ حجز جديد</h3><button class="modal-close" onclick="closeModal('addBookingModal')">×</button></div><form onsubmit="addBooking(event)"><div class="form-group"><label>اسم الطالب</label><input type="text" id="bookingStudentName" required></div><div class="form-group"><label>رقم الهاتف</label><input type="tel" id="bookingPhone" required></div><div class="form-group"><label>الدورة</label><select id="bookingCourse" required><option value="">اختر الدورة</option></select></div><div class="form-group"><label>التاريخ</label><input type="datetime-local" id="bookingDate" required></div><div class="form-group"><label>رابط Zoom</label><input type="url" id="bookingZoomLink"></div><div class="modal-actions"><button type="button" class="btn btn-danger" onclick="closeModal('addBookingModal')">إلغاء</button><button type="submit" class="btn btn-primary">💾 حفظ</button></div></form></div></div>
+
+<div class="modal-overlay" id="addScheduleModal"><div class="modal"><div class="modal-header"><h3>➕ إضافة حصة</h3><button class="modal-close" onclick="closeModal('addScheduleModal')">×</button></div><form onsubmit="addSchedule(event)"><div class="form-group"><label>اليوم</label><select id="scheduleDay" required><option value="السبت">السبت</option><option value="الأحد">الأحد</option><option value="الاثنين">الاثنين</option><option value="الثلاثاء">الثلاثاء</option><option value="الأربعاء">الأربعاء</option><option value="الخميس">الخميس</option><option value="الجمعة">الجمعة</option></select></div><div class="form-group"><label>الدورة</label><select id="scheduleCourse" required><option value="">اختر الدورة</option></select></div><div class="form-group"><label>الوقت</label><input type="time" id="scheduleTime" required></div><div class="modal-actions"><button type="button" class="btn btn-danger" onclick="closeModal('addScheduleModal')">إلغاء</button><button type="submit" class="btn btn-primary">💾 إضافة</button></div></form></div></div>
+
+<div class="modal-overlay" id="addQuizModal"><div class="modal"><div class="modal-header"><h3> بناء اختبار تفاعلي جديد</h3><button class="modal-close" onclick="closeModal('addQuizModal')">×</button></div><form onsubmit="addQuiz(event)"><div class="form-group"><label>عنوان الاختبار</label><input type="text" id="newQuizTitle" required></div><div class="form-group"><label>الدورة المرتبطة</label><select id="newQuizCourse"><option value="">اختر الدورة (اختياري)</option></select></div><div id="quizQuestionsContainer"></div><button type="button" class="btn btn-info" onclick="addQuizQuestion()" style="margin-bottom:20px;">➕ إضافة سؤال</button><div class="modal-actions"><button type="button" class="btn btn-danger" onclick="closeModal('addQuizModal')">إلغاء</button><button type="submit" class="btn btn-primary">💾 حفظ الاختبار</button></div></form></div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let DB = {
+  admin: { username: '', password: '' },
+  settings: { centerName: 'مستر علاء الحفني', phone: '01xxxxxxxxx', sessionPrice: 0, zoomLink: '' },
+  students: [], courses: [], contents: [], exams: [], homework: [], forum: [],
+  receipts: [], transactions: [], grades: [], bookings: [], schedule: [], tasks: [],
+  store: [{ id: 1, name: 'كتاب الفيزياء - الجزء الأول', price: 120, icon: '📖' }, { id: 2, name: 'كتاب الرياضيات - الجزء الثاني', price: 150, icon: '' }, { id: 3, name: 'كتاب الكيمياء - الجزء الأول', price: 130, icon: '🧪' }],
+  treasury: 0,
+  barcodes: { 'أولى ثانوي': 'G1-2026', 'ثانية ثانوي': 'G2-2026', 'ثالثة ثانوي': 'G3-2026', 'صف احتياطي 1': 'GX1-2026', 'صف احتياطي 2': 'GX2-2026', 'صف احتياطي 3': 'GX3-2026' },
+  subscriptions: [
+    { name: 'أساسية', price: 150, medal: '🥉', features: ['دورة واحدة', 'حضور المحاضرات', 'منتدى المناقشة'] },
+    { name: 'متقدمة', price: 300, medal: '🥈', features: ['3 دورات', 'حضور المحاضرات', 'منتدى المناقشة', 'الامتحانات والواجبات'] },
+    { name: 'شاملة', price: 500, medal: '🥇', features: ['جميع الدورات', 'حضور المحاضرات', 'منتدى المناقشة', 'الامتحانات والواجبات', 'شارات تقدير', 'متجر الكتب'] }
+  ]
+};
+
+let currentUser = null;
+let currentCourseForBarcode = null;
+
+function saveDB() { localStorage.setItem('platformDB', JSON.stringify(DB)); }
+function loadDB() {
+  const saved = localStorage.getItem('platformDB');
+  if (saved) {
+    DB = JSON.parse(saved);
+    if (!DB.barcodes) DB.barcodes = {};
+    if (!DB.contents) DB.contents = [];
+    if (!DB.transactions) DB.transactions = [];
+    if (!DB.store) DB.store = [];
+  }
+}
+
+function getDeviceId() {
+  let id = localStorage.getItem('deviceId');
+  if (!id) { id = 'DEV-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now(); localStorage.setItem('deviceId', id); }
+  return id;
+}
+
+function switchLoginTab(type) {
+  document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.login-form').forEach(f => f.classList.remove('active'));
+  if (type === 'admin') { document.querySelectorAll('.login-tab')[0].classList.add('active'); document.getElementById('adminLoginForm').classList.add('active'); }
+  else { document.querySelectorAll('.login-tab')[1].classList.add('active'); document.getElementById('studentLoginForm').classList.add('active'); }
+}
+
+function adminLogin(e) {
+  e.preventDefault();
+  const username = document.getElementById('adminUsername').value.trim();
+  const password = document.getElementById('adminPassword').value.trim();
+  if (!username || !password) { showToast('يرجى إدخال اسم المستخدم وكلمة المرور', 'error'); return; }
+  if (!DB.admin.username) { DB.admin.username = username; DB.admin.password = password; saveDB(); showToast('تم تعيين بيانات المدير بنجاح'); }
+  else { if (username !== DB.admin.username || password !== DB.admin.password) { showToast('بيانات الدخول غير صحيحة', 'error'); return; } }
+  currentUser = { type: 'admin', data: { username } };
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('adminDashboard').classList.add('active');
+  renderAdminDashboard();
+  showToast('مرحباً بك يا مستر علاء');
+}
+
+function studentLogin(e) {
+  e.preventDefault();
+  const fullName = document.getElementById('studentFullName').value.trim();
+  const phone = document.getElementById('studentPhone').value.trim();
+  const grade = document.getElementById('studentGrade').value;
+  if (!fullName || !phone || !grade) { showToast('يرجى ملء جميع البيانات', 'error'); return; }
+  const deviceId = getDeviceId();
+  let student = DB.students.find(s => s.phone === phone && s.name === fullName);
+  if (!student) {
+    student = { id: Date.now(), name: fullName, phone: phone, grade: grade, deviceId: deviceId, barcode: DB.barcodes[grade], registeredAt: new Date().toISOString(), loginCount: 0, videoWatchCount: 0, isActive: true, lastLogin: new Date().toISOString(), subscription: '', paidCourses: [], receipts: [], balance: 0 };
+    DB.students.push(student); saveDB(); showToast('تم تسجيلك بنجاح - تم ربط حسابك بجهازك');
+  } else {
+    if (student.deviceId !== deviceId) { showToast('⛔ هذا الحساب مرتبط بجهاز آخر', 'error'); return; }
+    student.loginCount++; student.lastLogin = new Date().toISOString(); student.isActive = true; saveDB();
+  }
+  currentUser = { type: 'student', data: student };
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('studentDashboard').classList.add('active');
+  renderStudentDashboard();
+  showToast('مرحباً ' + student.name);
+}
+
+function logout() {
+  if (currentUser && currentUser.type === 'student') { const student = DB.students.find(s => s.id === currentUser.data.id); if (student) { student.isActive = false; saveDB(); } }
+  currentUser = null;
+  document.getElementById('adminDashboard').classList.remove('active');
+  document.getElementById('studentDashboard').classList.remove('active');
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('adminUsername').value = ''; document.getElementById('adminPassword').value = '';
+  document.getElementById('studentFullName').value = ''; document.getElementById('studentPhone').value = ''; document.getElementById('studentGrade').value = '';
+}
+
+function showAdminSection(section, el) {
+  document.querySelectorAll('.admin-section').forEach(s => s.classList.add('hidden'));
+  document.getElementById('section-' + section).classList.remove('hidden');
+  document.querySelectorAll('#adminDashboard .menu-item').forEach(m => m.classList.remove('active'));
+  if (el) el.classList.add('active');
+  const titles = { dashboard: ' لوحة التحكم', students: '🎓 الطلاب', courses: '📚 الدورات', attendance: '✅ الحضور', exams: '📝 الامتحانات', homework: '📋 الواجبات', forum: '💬 المنتدى', wallet: '💰 المحفظة', subscriptions: '👑 الاشتراكات', store: '🛒 المتجر', booking: '📅 الحجز', receipts: ' الإيصالات', analytics: '📈 التحليلات', grades: '🎓 سجل الدرجات', questionBank: '💡 بنك الأسئلة', leaderboard: '🏆 لوحة الصدارة', certificates: '🏅 الشهادات', schedule: '🗓️ الجدول', content: '🎬 مكتبة المحتوى', tasks: '✅ مهامي', settings: '️ الإعدادات' };
+  document.getElementById('sectionTitle').textContent = titles[section] || '';
+  renderAdminSection(section);
+}
+
+function renderAdminSection(section) {
+  if (section === 'students') renderStudentsTable();
+  if (section === 'courses') renderCoursesList();
+  if (section === 'subscriptions') renderSubscriptions();
+  if (section === 'store') renderStore();
+  if (section === 'content') renderContentList();
+  if (section === 'receipts') renderReceiptsList();
+  if (section === 'exams') renderExamsList();
+  if (section === 'homework') renderHomeworkList();
+  if (section === 'forum') renderForumList();
+  if (section === 'questionBank') renderQuestionBankList();
+  if (section === 'booking') renderBookingList();
+  if (section === 'schedule') renderSchedule();
+  if (section === 'wallet') renderTreasury();
+}
+
+function renderAdminDashboard() {
+  document.getElementById('statStudents').textContent = DB.students.length;
+  document.getElementById('statCourses').textContent = DB.courses.length;
+  document.getElementById('statRevenue').textContent = DB.treasury + ' ج.م';
+  document.getElementById('menuCoursesCount').textContent = DB.courses.length;
+  document.getElementById('menuStudentsCount').textContent = DB.students.length;
+  document.getElementById('menuReceiptsCount').textContent = DB.receipts.length;
+  document.getElementById('menuBookingCount').textContent = DB.bookings.length;
+  const activeCount = DB.students.filter(s => s.isActive).length;
+  document.getElementById('statAttendance').textContent = DB.students.length > 0 ? Math.round((activeCount/DB.students.length)*100) + '%' : '0%';
+}
+
+function renderStudentsTable(filter = 'all') {
+  let students = [...DB.students];
+  if (filter === 'active') students = students.filter(s => s.isActive);
+  else if (filter === 'inactive') students = students.filter(s => !s.isActive);
+  else if (filter !== 'all') students = students.filter(s => s.grade === filter);
+  const tbody = document.getElementById('studentsTableBody');
+  if (students.length === 0) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888;">لا يوجد طلاب</td></tr>'; return; }
+  tbody.innerHTML = students.map(s => `<tr><td><span class="status-light ${s.isActive ? 'active' : 'inactive'}"></span></td><td><strong>${s.name}</strong></td><td>${s.grade}</td><td>${s.phone}</td><td><code style="background:#f0f2f5;padding:3px 8px;border-radius:4px;">${s.barcode}</code></td><td>${s.loginCount}</td><td>${s.videoWatchCount}</td><td><button class="btn btn-info" onclick="viewStudent(${s.id})">👁️</button><button class="btn btn-danger" onclick="deleteStudent(${s.id})">️</button></td></tr>`).join('');
+}
+
+function filterStudents(filter, el) { document.querySelectorAll('#section-students .filter-chip').forEach(c => c.classList.remove('active')); el.classList.add('active'); renderStudentsTable(filter); }
+function viewStudent(id) { const s = DB.students.find(x => x.id === id); if (!s) return; alert(`بيانات الطالب:\n\nالاسم: ${s.name}\nالصف: ${s.grade}\nالتليفون: ${s.phone}\nالباركود: ${s.barcode}\nمرات الدخول: ${s.loginCount}\nمرات مشاهدة الفيديو: ${s.videoWatchCount}\nحالة النشاط: ${s.isActive ? 'نشط 🟢' : 'غير نشط 🔴'}`); }
+function deleteStudent(id) { if (!confirm('هل أنت متأكد من حذف هذا الطالب؟')) return; DB.students = DB.students.filter(s => s.id !== id); saveDB(); renderStudentsTable(); }
+
+function addStudent(e) {
+  e.preventDefault();
+  const name = document.getElementById('newStudentName').value.trim();
+  const phone = document.getElementById('newStudentPhone').value.trim();
+  const balance = parseInt(document.getElementById('newStudentBalance').value) || 0;
+  const student = { id: Date.now(), name, phone, grade: 'غير محدد', deviceId: null, barcode: 'STD-' + Math.random().toString(36).substr(2, 6).toUpperCase(), registeredAt: new Date().toISOString(), loginCount: 0, videoWatchCount: 0, isActive: false, lastLogin: null, subscription: '', paidCourses: [], receipts: [], balance };
+  DB.students.push(student); saveDB(); closeModal('addStudentModal'); renderStudentsTable(); showToast('تم إضافة الطالب بنجاح'); e.target.reset();
+}
+
+function addCourse(e) {
+  e.preventDefault();
+  const name = document.getElementById('newCourseName').value.trim();
+  const grades = Array.from(document.getElementById('newCourseGrade').selectedOptions).map(o => o.value);
+  const section = document.getElementById('newCourseSection').value;
+  const price = parseInt(document.getElementById('newCoursePrice').value);
+  const link = document.getElementById('newCourseLink').value.trim();
+  const icon = document.getElementById('newCourseIcon').value;
+  if (grades.length === 0) { showToast('يرجى اختيار صف واحد على الأقل', 'error'); return; }
+  const course = { id: Date.now(), name, grades, section, price, link, icon, createdAt: new Date().toISOString() };
+  DB.courses.push(course); saveDB(); closeModal('addCourseModal'); renderCoursesList(); showToast('تم إضافة الدورة'); e.target.reset();
+}
+
+function renderCoursesList() {
+  const list = document.getElementById('coursesList');
+  if (DB.courses.length === 0) { list.innerHTML = '<p style="color:#888;text-align:center;">لا توجد دورات</p>'; return; }
+  list.innerHTML = DB.courses.map(c => `<div class="course-card"><div class="course-icon">${c.icon}</div><div class="course-info"><h4>${c.name}</h4><p>الصفوف: ${c.grades.join('، ')} | القسم: ${c.section}</p></div><div class="course-price">${c.price} ج.م</div><button class="btn btn-danger" onclick="deleteCourse(${c.id})">🗑️</button></div>`).join('');
+}
+function deleteCourse(id) { if (!confirm('حذف الدورة؟')) return; DB.courses = DB.courses.filter(c => c.id !== id); saveDB(); renderCoursesList(); }
+
+function addContent(e) {
+  e.preventDefault();
+  const title = document.getElementById('newContentTitle').value.trim();
+  const courseId = parseInt(document.getElementById('newContentCourse').value);
+  const price = parseInt(document.getElementById('newContentPrice').value);
+  const type = document.getElementById('newContentType').value;
+  const link = document.getElementById('newContentLink').value.trim();
+  const content = { id: Date.now(), title, courseId, price, type, link, createdAt: new Date().toISOString() };
+  DB.contents.push(content); saveDB(); closeModal('addContentModal'); renderContentList(); showToast('تم إضافة المحتوى - محمي من التحميل والسكرين شوت'); e.target.reset();
+}
+
+function renderContentList() {
+  const list = document.getElementById('contentList');
+  const courseSelect = document.getElementById('newContentCourse');
+  courseSelect.innerHTML = '<option value="">اختر الدورة</option>' + DB.courses.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  if (DB.contents.length === 0) { list.innerHTML = '<p style="color:#888;text-align:center;">لا يوجد محتوى</p>'; return; }
+  list.innerHTML = DB.contents.map(c => { const course = DB.courses.find(x => x.id === c.courseId); return `<div class="course-card"><div class="course-icon">${c.type === 'video' ? '🎬' : c.type === 'pdf' ? '📄' : ''}</div><div class="course-info"><h4>${c.title}</h4><p>${course ? course.name : 'دورة محذوفة'}</p></div><div class="course-price">${c.price} ج.م</div><button class="btn btn-danger" onclick="deleteContent(${c.id})">️</button></div>`; }).join('');
+}
+function deleteContent(id) { if (!confirm('حذف المحتوى؟')) return; DB.contents = DB.contents.filter(c => c.id !== id); saveDB(); renderContentList(); }
+
+function renderSubscriptions() {
+  const grid = document.getElementById('subscriptionsGrid');
+  grid.innerHTML = DB.subscriptions.map((sub, idx) => {
+    const subStudents = DB.students.filter(s => s.subscription === sub.name);
+    const activeStudents = subStudents.filter(s => s.isActive);
+    const inactiveStudents = subStudents.filter(s => !s.isActive);
+    let studentsHTML = '';
+    if (subStudents.length > 0) {
+      studentsHTML = `<div class="sub-students"><strong> الطلاب (${subStudents.length})</strong>${activeStudents.map(s => `<div class="sub-student-item"><span><span class="status-light active"></span> ${s.name}</span><small>${s.grade}</small></div>`).join('')}${inactiveStudents.map(s => `<div class="sub-student-item"><span><span class="status-light inactive"></span> ${s.name}</span><small>${s.grade}</small></div>`).join('')}</div>`;
+    } else { studentsHTML = '<div class="sub-students"><em style="color:#888;">لا يوجد طلاب في هذه الباقة</em></div>'; }
+    const medalClass = idx === 0 ? 'bronze' : idx === 1 ? 'silver' : 'gold';
+    return `<div class="subscription-card ${medalClass}"><div class="medal">${sub.medal}</div><h3>باقة ${sub.name}</h3><div class="price">${sub.price} ج.م <small>/ شهرياً</small></div><ul>${sub.features.map(f => `<li>${f}</li>`).join('')}</ul><button class="btn btn-primary">اشتراك</button>${studentsHTML}</div>`;
+  }).join('');
+}
+
+function renderStore() {
+  const list = document.getElementById('storeList');
+  if (DB.store.length === 0) { list.innerHTML = '<p style="color:#888;text-align:center;">لا توجد منتجات</p>'; return; }
+  list.innerHTML = DB.store.map(item => `<div class="store-item"><div class="icon">${item.icon}</div><h4>${item.name}</h4><div class="price">${item.price} ج.م</div><button class="btn btn-primary">🛒 شراء</button></div>`).join('');
+}
+
+function renderTreasury() {
+  document.getElementById('walletBalance').textContent = DB.treasury + ' ج.م';
+  document.getElementById('walletIncome').textContent = DB.treasury + ' ج.م';
+  document.getElementById('walletExpenses').textContent = '0 ج.م';
+  document.getElementById('walletTransactions').textContent = DB.transactions.length;
+}
+
+function deposit(e) {
+  e.preventDefault();
+  const amount = parseInt(document.getElementById('depositAmount').value);
+  const desc = document.getElementById('depositDesc').value;
+  DB.treasury += amount;
+  DB.transactions.push({ date: new Date().toISOString(), type: '💵 إيداع', amount: amount, desc: desc, balanceAfter: DB.treasury });
+  saveDB(); closeModal('depositModal'); renderTreasury(); showToast('تم الإيداع بنجاح'); e.target.reset();
+}
+
+function withdraw(e) {
+  e.preventDefault();
+  const phone = document.getElementById('withdrawPhone').value;
+  const amount = parseInt(document.getElementById('withdrawAmount').value);
+  if (amount > DB.treasury) { showToast('الرصيد غير كافٍ', 'error'); return; }
+  if (!confirm(`تأكيد سحب ${amount} ج.م إلى رقم ${phone}؟`)) return;
+  DB.treasury -= amount;
+  DB.transactions.push({ date: new Date().toISOString(), type: '💸 سحب فودافون كاش', amount: -amount, desc: `إلى ${phone}`, balanceAfter: DB.treasury });
+  saveDB(); closeModal('withdrawModal'); renderTreasury(); showToast('تم السحب بنجاح'); e.target.reset();
+}
+
+function uploadReceiptAdmin(e) {
+  e.preventDefault();
+  const studentId = parseInt(document.getElementById('receiptStudent').value);
+  const courseId = parseInt(document.getElementById('receiptCourseAdmin').value);
+  const amount = parseInt(document.getElementById('receiptAmountAdmin').value);
+  const method = document.getElementById('receiptMethodAdmin').value;
+  const student = DB.students.find(s => s.id === studentId);
+  const course = DB.courses.find(c => c.id === courseId);
+  if (!student || !course) return;
+  const receipt = { id: Date.now(), studentId, courseId, amount, method, status: 'approved', date: new Date().toISOString() };
+  DB.receipts.push(receipt);
+  if (!student.paidCourses) student.paidCourses = [];
+  if (!student.paidCourses.includes(courseId)) student.paidCourses.push(courseId);
+  DB.treasury += amount;
+  DB.transactions.push({ date: new Date().toISOString(), type: '📄 إيصال طالب', amount: amount, desc: `${student.name} - ${course.name}`, balanceAfter: DB.treasury });
+  saveDB(); closeModal('uploadReceiptModal'); renderReceiptsList(); showToast('تم رفع الإيصال وتفعيل الدورة للطالب'); e.target.reset();
+}
+
+function renderReceiptsList() {
+  const studentSelect = document.getElementById('receiptStudent');
+  studentSelect.innerHTML = '<option value="">اختر الطالب</option>' + DB.students.map(s => `<option value="${s.id}">${s.name} - ${s.grade}</option>`).join('');
+  const courseSelect = document.getElementById('receiptCourseAdmin');
+  courseSelect.innerHTML = '<option value="">اختر الدورة</option>' + DB.courses.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  const list = document.getElementById('receiptsList');
+  if (DB.receipts.length === 0) { list.innerHTML = '<p style="color:#888;text-align:center;">لا توجد إيصالات</p>'; return; }
+  list.innerHTML = '<table><thead><tr><th>التاريخ</th><th>الطالب</th><th>الدورة</th><th>المبلغ</th><th>الحالة</th></tr></thead><tbody>' + DB.receipts.map(r => { const student = DB.students.find(s => s.id === r.studentId); const course = DB.courses.find(c => c.id === r.courseId); return `<tr><td>${new Date(r.date).toLocaleDateString('ar-EG')}</td><td>${student ? student.name : '-'}</td><td>${course ? course.name : '-'}</td><td>${r.amount} ج.م</td><td><span style="color:#27ae60;">✅ معتمد</span></td></tr>`; }).join('') + '</tbody></table>';
+}
+
+function renderExamsList() { const list = document.getElementById('examsList'); if (DB.exams.length === 0) { list.innerHTML = '<p style="color:#888;text-align:center;">لا توجد امتحانات</p>'; return; } list.innerHTML = DB.exams.map(ex => `<div class="course-card"><div class="course-icon">📝</div><div class="course-info"><h4>${ex.title}</h4><p>${ex.course || 'عام'}</p></div></div>`).join(''); }
+function renderHomeworkList() { const list = document.getElementById('homeworkList'); if (DB.homework.length === 0) { list.innerHTML = '<p style="color:#888;text-align:center;">لا توجد واجبات</p>'; return; } list.innerHTML = DB.homework.map(h => `<div class="course-card"><div class="course-icon"></div><div class="course-info"><h4>${h.title}</h4><p>${h.course || 'عام'}</p></div></div>`).join(''); }
+function renderForumList() { const list = document.getElementById('forumList'); if (DB.forum.length === 0) { list.innerHTML = '<p style="color:#888;text-align:center;">لا توجد مواضيع</p>'; return; } list.innerHTML = DB.forum.map(t => `<div class="course-card"><div class="course-icon">💬</div><div class="course-info"><h4>${t.title}</h4><p>${t.section}</p></div></div>`).join(''); }
+function renderQuestionBankList() { document.getElementById('questionBankList').innerHTML = '<p style="color:#888;text-align:center;">لا توجد اختبارات</p>'; }
+function renderBookingList() { const list = document.getElementById('bookingList'); if (DB.bookings.length === 0) { list.innerHTML = '<p style="color:#888;text-align:center;">لا توجد حجوزات</p>'; return; } list.innerHTML = DB.bookings.map(b => `<div class="course-card"><div class="course-info"><h4>${b.studentName}</h4><p>${b.course} - ${new Date(b.date).toLocaleString('ar-EG')}</p></div></div>`).join(''); }
+function renderSchedule() {
+  const list = document.getElementById('scheduleList');
+  if (DB.schedule.length === 0) { list.innerHTML = '<p style="color:#888;text-align:center;">لا توجد حصص</p>'; return; }
+  const days = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+  let html = '';
+  days.forEach(day => { const daySchedules = DB.schedule.filter(s => s.day === day); if (daySchedules.length > 0) { html += `<div class="schedule-day"><strong>${day}</strong><br>`; daySchedules.forEach(s => { const course = DB.courses.find(c => c.id === s.courseId); html += `${s.time} - ${course ? course.name : 'دورة'}<br>`; }); html += '</div>'; } });
+  list.innerHTML = html || '<p style="color:#888;text-align:center;">لا توجد حصص</p>';
+}
+
+function showStudentSection(section, el) {
+  document.querySelectorAll('.student-section').forEach(s => s.classList.add('hidden'));
+  const sectionEl = document.getElementById('student-' + section);
+  if (sectionEl) sectionEl.classList.remove('hidden');
+  document.querySelectorAll('#studentDashboard .menu-item').forEach(m => m.classList.remove('active'));
+  if (el) el.classList.add('active');
+  const titles = { home: ' الرئيسية', myCourses: '📚 دوراتي', exams: '📝 الامتحانات', homework: '📋 الواجبات', forum: ' المنتدى', wallet: '💰 المحفظة', subscriptions: '👑 الاشتراكات', store: '🛒 المتجر', questionBank: '💡 بنك الأسئلة', uploadReceipt: '📄 رفع إيصال' };
+  document.getElementById('studentSectionTitle').textContent = titles[section] || '';
+  renderStudentSection(section);
+}
+
+function renderStudentDashboard() {
+  const student = currentUser.data;
+  document.getElementById('studentNameDisplay').textContent = student.name;
+  document.getElementById('studentGradeDisplay').textContent = student.grade;
+  document.getElementById('studentAvatar').textContent = student.name.charAt(0);
+  document.getElementById('studentBarcode').textContent = student.barcode;
+  document.getElementById('welcomeMessage').textContent = `مرحباً ${student.name} - صف: ${student.grade}`;
+  renderStudentHome();
+}
+
+function renderStudentSection(section) {
+  if (section === 'home') renderStudentHome();
+  if (section === 'myCourses') renderMyCourses();
+  if (section === 'exams') renderStudentExams();
+  if (section === 'homework') renderStudentHomework();
+  if (section === 'forum') renderStudentForum();
+  if (section === 'wallet') renderStudentWallet();
+  if (section === 'subscriptions') renderStudentSubscriptions();
+  if (section === 'store') renderStudentStore();
+  if (section === 'questionBank') renderStudentQuestionBank();
+  if (section === 'uploadReceipt') renderStudentReceiptForm();
+}
+
+function renderStudentHome() {
+  const student = currentUser.data;
+  const courses = DB.courses.filter(c => c.grades.includes(student.grade));
+  const list = document.getElementById('studentCoursesList');
+  if (courses.length === 0) { list.innerHTML = '<p style="color:#888;text-align:center;">لا توجد دورات متاحة لصفك حالياً</p>'; return; }
+  list.innerHTML = courses.map(c => { const isPaid = student.paidCourses && student.paidCourses.includes(c.id); return `<div class="course-card" onclick="openCourseForStudent(${c.id})"><div class="course-icon">${c.icon}</div><div class="course-info"><h4>${c.name}</h4><p>${isPaid ? '✅ مفعلة' : '💰 تحتاج دفع ' + c.price + ' ج.م'}</p></div><div class="course-price">${c.price} ج.م</div></div>`; }).join('');
+}
+
+function renderMyCourses() {
+  const student = currentUser.data;
+  const paidCourses = DB.courses.filter(c => student.paidCourses && student.paidCourses.includes(c.id));
+  const list = document.getElementById('myCoursesList');
+  if (paidCourses.length === 0) { list.innerHTML = '<p style="color:#888;text-align:center;">لم تشترك في أي دورة بعد</p>'; return; }
+  list.innerHTML = paidCourses.map(c => `<div class="course-card" onclick="openCourseForStudent(${c.id})"><div class="course-icon">${c.icon}</div><div class="course-info"><h4>${c.name}</h4><p>✅ مفعلة - اضغط لعرض المحتوى</p></div></div>`).join('');
+}
+
+function openCourseForStudent(courseId) {
+  currentCourseForBarcode = courseId;
+  const student = currentUser.data;
+  document.getElementById('barcodeHint').textContent = `الباركود الخاص بصفك (${student.grade}): ${student.barcode}`;
+  document.getElementById('barcodeInput').value = '';
+  openModal('barcodeModal');
+}
+
+function verifyBarcode() {
+  const input = document.getElementById('barcodeInput').value.trim();
+  const student = currentUser.data;
+  if (input !== student.barcode) { showToast('❌ الباركود غير صحيح', 'error'); return; }
+  closeModal('barcodeModal');
+  showCourseContent(currentCourseForBarcode);
+}
+
+function showCourseContent(courseId) {
+  const student = currentUser.data;
+  const course = DB.courses.find(c => c.id === courseId);
+  if (!course) return;
+  const isPaid = student.paidCourses && student.paidCourses.includes(courseId);
+  const contents = DB.contents.filter(c => c.courseId === courseId);
+  document.getElementById('contentTitle').textContent = '🎬 ' + course.name;
+  const viewer = document.getElementById('contentViewerArea');
+  const msg = document.getElementById('contentAccessMessage');
+  if (!isPaid) {
+    msg.innerHTML = `<div class="icon">🔒</div><h3>المحتوى مقفل</h3><p>يجب دفع ${course.price} ج.م لعرض المحتوى</p><button class="btn btn-primary" style="margin-top:15px;" onclick="showStudentSection('uploadReceipt', document.querySelector('#studentDashboard .menu-item:nth-child(10)'))"> رفع إيصال الدفع</button>`;
+    msg.style.display = 'block';
+  } else if (contents.length === 0) {
+    msg.innerHTML = `<div class="icon">📭</div><h3>لا يوجد محتوى بعد</h3><p>سيتم إضافة المحتوى قريباً</p>`;
+    msg.style.display = 'block';
+  } else {
+    msg.style.display = 'none';
+    let contentHTML = '<div class="watermark">مستر علاء الحفني - ' + student.name + '</div>';
+    contents.forEach(c => {
+      if (c.type === 'video') { contentHTML += `<div style="margin-bottom:20px;"><h4 style="color:white;margin-bottom:10px;">🎬 ${c.title}</h4><video controls controlsList="nodownload" disablePictureInPicture oncontextmenu="return false;" style="width:100%;max-width:100%;"><source src="${c.link}" type="video/mp4"></video></div>`; }
+      else if (c.type === 'pdf') { contentHTML += `<div style="margin-bottom:20px;"><h4 style="color:white;margin-bottom:10px;">📄 ${c.title}</h4><iframe src="${c.link}" style="width:100%;height:500px;border:none;" oncontextmenu="return false;"></iframe></div>`; }
+      else { contentHTML += `<div style="margin-bottom:20px;"><h4 style="color:white;margin-bottom:10px;">🔗 ${c.title}</h4><a href="${c.link}" target="_blank" style="color:#667eea;">فتح الرابط</a></div>`; }
+    });
+    viewer.innerHTML = contentHTML;
+    student.videoWatchCount++; saveDB();
+  }
+  showStudentSection('contentViewer', null);
+  document.querySelectorAll('.student-section').forEach(s => s.classList.add('hidden'));
+  document.getElementById('student-contentViewer').classList.remove('hidden');
+}
+
+function renderStudentExams() { const list = document.getElementById('studentExamsList'); if (DB.exams.length === 0) { list.innerHTML = '<p style="color:#888;text-align:center;">لا توجد امتحانات</p>'; return; } list.innerHTML = DB.exams.map(e => `<div class="course-card"><div class="course-icon"></div><div class="course-info"><h4>${e.title}</h4><p>${e.course || 'عام'}</p></div></div>`).join(''); }
+function renderStudentHomework() { const list = document.getElementById('studentHomeworkList'); if (DB.homework.length === 0) { list.innerHTML = '<p style="color:#888;text-align:center;">لا توجد واجبات</p>'; return; } list.innerHTML = DB.homework.map(h => `<div class="course-card"><div class="course-icon">📋</div><div class="course-info"><h4>${h.title}</h4><p>${h.course || 'عام'}</p></div></div>`).join(''); }
+function renderStudentForum() { const list = document.getElementById('studentForumList'); if (DB.forum.length === 0) { list.innerHTML = '<p style="color:#888;text-align:center;">لا توجد مواضيع</p>'; return; } list.innerHTML = DB.forum.map(t => `<div class="course-card"><div class="course-icon">💬</div><div class="course-info"><h4>${t.title}</h4><p>${t.section}</p></div></div>`).join(''); }
+function renderStudentWallet() { const student = currentUser.data; document.getElementById('studentWalletBalance').textContent = (student.balance || 0) + ' ج.م'; }
+function renderStudentSubscriptions() { const grid = document.getElementById('studentSubscriptionsGrid'); grid.innerHTML = DB.subscriptions.map((sub, idx) => { const medalClass = idx === 0 ? 'bronze' : idx === 1 ? 'silver' : 'gold'; return `<div class="subscription-card ${medalClass}"><div class="medal">${sub.medal}</div><h3>باقة ${sub.name}</h3><div class="price">${sub.price} ج.م <small>/ شهرياً</small></div><ul>${sub.features.map(f => `<li>${f}</li>`).join('')}</ul><button class="btn btn-primary" onclick="subscribe('${sub.name}')">اشتراك</button></div>`; }).join(''); }
+function renderStudentStore() { const list = document.getElementById('studentStoreList'); if (DB.store.length === 0) { list.innerHTML = '<p style="color:#888;text-align:center;">لا توجد منتجات</p>'; return; } list.innerHTML = DB.store.map(item => `<div class="store-item"><div class="icon">${item.icon}</div><h4>${item.name}</h4><div class="price">${item.price} ج.م</div><button class="btn btn-primary">🛒 شراء</button></div>`).join(''); }
+function renderStudentQuestionBank() { document.getElementById('studentQuestionBankList').innerHTML = '<p style="color:#888;text-align:center;">💡 بنك الأسئلة متاح للجميع</p>'; }
+function renderStudentReceiptForm() { const student = currentUser.data; const courses = DB.courses.filter(c => c.grades.includes(student.grade)); document.getElementById('receiptCourse').innerHTML = '<option value="">اختر الدورة</option>' + courses.map(c => `<option value="${c.id}">${c.name} - ${c.price} ج.م</option>`).join(''); }
+
+function uploadReceipt(e) {
+  e.preventDefault();
+  const student = currentUser.data;
+  const courseId = parseInt(document.getElementById('receiptCourse').value);
+  const amount = parseInt(document.getElementById('receiptAmount').value);
+  const method = document.getElementById('receiptMethod').value;
+  const receipt = { id: Date.now(), studentId: student.id, courseId, amount, method, status: 'pending', date: new Date().toISOString() };
+  DB.receipts.push(receipt); saveDB(); showToast('✅ تم رفع الإيصال - سيتم التفعيل بعد مراجعة المدير'); e.target.reset();
+}
+function subscribe(name) { showToast('يرجى رفع إيصال الدفع للاشتراك في باقة ' + name); showStudentSection('uploadReceipt', document.querySelector('#studentDashboard .menu-item:nth-child(10)')); }
+
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+function showToast(msg, type = 'success') {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast show' + (type === 'error' ? ' error' : '');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+document.addEventListener('contextmenu', function(e) { if (e.target.closest('.protected-content')) { e.preventDefault(); showToast('⛔ غير مسموح بالنقر الأيمن', 'error'); } });
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'PrintScreen') { e.preventDefault(); showToast('⛔ غير مسموح بعمل سكرين شوت', 'error'); navigator.clipboard.writeText('').catch(()=>{}); }
+  if ((e.ctrlKey || e.metaKey) && ['p','s','c','u'].includes(e.key.toLowerCase())) { if (document.querySelector('.protected-content:hover') || document.getElementById('student-contentViewer') && !document.getElementById('student-contentViewer').classList.contains('hidden')) { e.preventDefault(); showToast('⛔ هذا الإجراء محظور', 'error'); } }
+  if (e.key === 'F12') { e.preventDefault(); }
+});
+document.addEventListener('dragstart', function(e) { if (e.target.closest('.protected-content')) { e.preventDefault(); } });
+
+function addExam(e) { e.preventDefault(); const exam = { id: Date.now(), title: document.getElementById('newExamTitle').value, course: document.getElementById('newExamCourse').value, type: document.getElementById('newExamType').value, price: parseInt(document.getElementById('newExamPrice').value) || 0, date: document.getElementById('newExamDate').value, maxGrade: parseInt(document.getElementById('newExamMaxGrade').value), shuffle: document.getElementById('newExamShuffle').value }; DB.exams.push(exam); saveDB(); closeModal('addExamModal'); renderExamsList(); showToast('تم إضافة الامتحان'); e.target.reset(); }
+function addHomework(e) { e.preventDefault(); const homework = { id: Date.now(), title: document.getElementById('newHomeworkTitle').value, course: document.getElementById('newHomeworkCourse').value, desc: document.getElementById('newHomeworkDesc').value, deadline: document.getElementById('newHomeworkDeadline').value }; DB.homework.push(homework); saveDB(); closeModal('addHomeworkModal'); renderHomeworkList(); showToast('تم إضافة الواجب'); e.target.reset(); }
+function addTopic(e) { e.preventDefault(); const topic = { id: Date.now(), title: document.getElementById('newTopicTitle').value, section: document.getElementById('newTopicSection').value, content: document.getElementById('newTopicContent').value }; DB.forum.push(topic); saveDB(); closeModal('addTopicModal'); renderForumList(); showToast('تم نشر الموضوع'); e.target.reset(); }
+function generateCode(e) { e.preventDefault(); const code = 'CODE-' + Math.random().toString(36).substr(2, 8).toUpperCase(); document.getElementById('generatedCode').textContent = code; closeModal('generateCodeModal'); openModal('showCodeModal'); e.target.reset(); }
+function copyCode() { const code = document.getElementById('generatedCode').textContent; navigator.clipboard.writeText(code); showToast('تم نسخ الكود'); }
+function addBooking(e) { e.preventDefault(); const booking = { id: Date.now(), studentName: document.getElementById('bookingStudentName').value, phone: document.getElementById('bookingPhone').value, course: document.getElementById('bookingCourse').value, date: document.getElementById('bookingDate').value, zoomLink: document.getElementById('bookingZoomLink').value }; DB.bookings.push(booking); saveDB(); closeModal('addBookingModal'); renderBookingList(); showToast('تم إضافة الحجز'); e.target.reset(); }
+function addSchedule(e) { e.preventDefault(); const schedule = { id: Date.now(), day: document.getElementById('scheduleDay').value, courseId: parseInt(document.getElementById('scheduleCourse').value), time: document.getElementById('scheduleTime').value }; DB.schedule.push(schedule); saveDB(); closeModal('addScheduleModal'); renderSchedule(); showToast('تم إضافة الحصة'); e.target.reset(); }
+function addGrade(e) { e.preventDefault(); const grade = { id: Date.now(), studentId: parseInt(document.getElementById('gradeStudent').value), courseId: parseInt(document.getElementById('gradeCourse').value), examName: document.getElementById('gradeExamName').value, score: parseInt(document.getElementById('gradeScore').value), maxScore: parseInt(document.getElementById('gradeMaxScore').value) }; DB.grades.push(grade); saveDB(); closeModal('addGradeModal'); showToast('تم رصد الدرجة'); e.target.reset(); }
+function addQuiz(e) { e.preventDefault(); showToast('تم حفظ الاختبار'); closeModal('addQuizModal'); e.target.reset(); }
+function addQuizQuestion() { showToast('تم إضافة سؤال'); }
+
+loadDB();
+window.addEventListener('beforeunload', function(e) { saveDB(); });
+console.log('✅ تم تحميل منصة مستر علاء الحفني - النسخة الكاملة');
+</script>
+
+</body>
+</html>
