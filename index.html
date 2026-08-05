@@ -688,6 +688,7 @@ table tr:hover { background: #f8f9fa; }
     <div class="admin-section hidden" id="section-store">
       <div class="card">
         <div class="card-header"><h3>🛒 المتجر الإلكتروني</h3></div>
+        <div style="margin-bottom:20px;"><button class="btn btn-primary" onclick="openModal('addStoreItemModal')">➕ إضافة كتاب / ملزمة</button></div>
         <div class="store-grid" id="storeList"></div>
       </div>
     </div>
@@ -816,12 +817,24 @@ table tr:hover { background: #f8f9fa; }
         <button class="btn btn-primary">💾 حفظ الإعدادات</button>
       </div>
       <div class="settings-section">
+        <h3 style="margin-bottom:20px;">🔐 بيانات دخول المدير</h3>
+        <p style="color:#888;margin-bottom:15px;">غيّر اسم المستخدم و/أو كلمة السر الخاصة بدخولك كمدير للمنصة</p>
+        <form onsubmit="changeAdminCredentials(event)">
+          <div class="form-group"><label>كلمة السر الحالية</label><input type="password" id="currentAdminPassword" required></div>
+          <div class="form-group"><label>اسم المستخدم الجديد</label><input type="text" id="newAdminUsername" placeholder="اتركه فارغًا لعدم التغيير"></div>
+          <div class="form-group"><label>كلمة السر الجديدة</label><input type="password" id="newAdminPassword" placeholder="اتركها فارغة لعدم التغيير"></div>
+          <div class="form-group"><label>تأكيد كلمة السر الجديدة</label><input type="password" id="confirmAdminPassword" placeholder="أعد كتابة كلمة السر الجديدة"></div>
+          <button type="submit" class="btn btn-primary">🔐 حفظ بيانات الدخول</button>
+        </form>
+      </div>
+      <div class="settings-section">
         <h3 style="margin-bottom:20px;">🗄️ النسخ الاحتياطي والبيانات</h3>
         <p style="color:#888;margin-bottom:15px;">احتفظ بنسخة من بيانات المنصة أو استعد نسخة سابقة</p>
         <div class="backup-section">
-          <button class="btn btn-primary">📥 تصدير نسخة احتياطية</button>
-          <button class="btn btn-success">📤 استيراد نسخة</button>
-          <button class="btn btn-info">📊 تصدير الطلاب Excel</button>
+          <button class="btn btn-primary" onclick="exportBackup()">📥 تصدير نسخة احتياطية</button>
+          <button class="btn btn-success" onclick="importBackup()">📤 استيراد نسخة</button>
+          <button class="btn btn-info" onclick="exportStudentsExcel()">📊 تصدير الطلاب Excel</button>
+          <input type="file" id="importBackupFile" accept="application/json" style="display:none;" onchange="handleImportBackup(event)">
         </div>
       </div>
     </div>
@@ -866,6 +879,21 @@ table tr:hover { background: #f8f9fa; }
           <p style="color:#888;font-size:13px;margin-top:10px;">استخدم هذا الباركود لدخول الدورات</p>
         </div>
       </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#e3f2fd;color:#2196f3;">📚</div>
+          <div class="stat-info"><h3 id="studentTotalCoursesCount">0</h3><p>عدد دورات صفك</p></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#e8f5e9;color:#4caf50;">✅</div>
+          <div class="stat-info"><h3 id="studentActiveCoursesCount">0</h3><p>الدورات المفعّلة</p></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>🔑 لديك كود تفعيل؟</h3></div>
+        <div class="form-group"><label>أدخل كود الدورة</label><input type="text" id="redeemCodeInput" placeholder="XXXX-XXXX-XXXX-XXXX" style="text-transform:uppercase;"></div>
+        <button class="btn btn-primary" onclick="redeemCode()">🔓 تفعيل الكود</button>
+      </div>
       <div class="card"><div class="card-header"><h3>📚 دورات صفك</h3></div><div id="studentCoursesList"></div></div>
     </div>
 
@@ -881,7 +909,9 @@ table tr:hover { background: #f8f9fa; }
       <div class="card">
         <div class="card-header"><h3>📄 رفع إيصال الدفع</h3></div>
         <form onsubmit="uploadReceipt(event)">
-          <div class="form-group"><label>الدورة</label><select id="receiptCourse" required></select></div>
+          <div class="form-group"><label>نوع الدفع</label><select id="receiptType" onchange="toggleReceiptType()"><option value="course">دورة واحدة</option><option value="subscription">باقة اشتراك شهرية</option></select></div>
+          <div class="form-group" id="receiptCourseGroup"><label>الدورة</label><select id="receiptCourse"></select></div>
+          <div class="form-group hidden" id="receiptSubscriptionGroup"><label>باقة الاشتراك</label><select id="receiptSubscriptionName"></select></div>
           <div class="form-group"><label>المبلغ المدفوع (ج.م)</label><input type="number" id="receiptAmount" required></div>
           <div class="form-group"><label>طريقة الدفع</label><select id="receiptMethod" required><option value="فودافون كاش">فودافون كاش</option><option value="اتصالات كاش">اتصالات كاش</option><option value="تحويل بنكي">تحويل بنكي</option><option value="إنستا باي">إنستا باي</option></select></div>
           <div class="form-group"><label>صورة الإيصال</label><input type="file" id="receiptFile" accept="image/*" required></div>
@@ -934,14 +964,16 @@ table tr:hover { background: #f8f9fa; }
 
 <div class="modal-overlay" id="addQuizModal"><div class="modal"><div class="modal-header"><h3> بناء اختبار تفاعلي جديد</h3><button class="modal-close" onclick="closeModal('addQuizModal')">×</button></div><form onsubmit="addQuiz(event)"><div class="form-group"><label>عنوان الاختبار</label><input type="text" id="newQuizTitle" required></div><div class="form-group"><label>الدورة المرتبطة</label><select id="newQuizCourse"><option value="">اختر الدورة (اختياري)</option></select></div><div id="quizQuestionsContainer"></div><button type="button" class="btn btn-info" onclick="addQuizQuestion()" style="margin-bottom:20px;">➕ إضافة سؤال</button><div class="modal-actions"><button type="button" class="btn btn-danger" onclick="closeModal('addQuizModal')">إلغاء</button><button type="submit" class="btn btn-primary">💾 حفظ الاختبار</button></div></form></div></div>
 
+<div class="modal-overlay" id="addStoreItemModal"><div class="modal"><div class="modal-header"><h3>➕ إضافة كتاب / ملزمة</h3><button class="modal-close" onclick="closeModal('addStoreItemModal')">×</button></div><form onsubmit="addStoreItem(event)"><div class="form-group"><label>اسم الكتاب/الملزمة</label><input type="text" id="newStoreItemName" required></div><div class="form-group"><label>السعر (ج.م)</label><input type="number" id="newStoreItemPrice" required min="0"></div><div class="form-group"><label>الأيقونة</label><select id="newStoreItemIcon"><option value="📖">📖 كتاب</option><option value="📘">📘 ملزمة</option><option value="📗">📗 مذكرة</option><option value="📙">📙 مراجعة نهائية</option><option value="🧪">🧪 كيمياء</option><option value="📐">📐 رياضيات</option></select></div><div class="modal-actions"><button type="button" class="btn btn-danger" onclick="closeModal('addStoreItemModal')">إلغاء</button><button type="submit" class="btn btn-primary">💾 حفظ</button></div></form></div></div>
+
 <div class="toast" id="toast"></div>
 
 <script>
 let DB = {
-  admin: { username: '', password: '' },
+  admin: { username: 'admin', password: 'admin123' }, adminCredentialsReset: true,
   settings: { centerName: 'مستر علاء الحفني', phone: '01xxxxxxxxx', sessionPrice: 0, zoomLink: '' },
   students: [], courses: [], contents: [], exams: [], homework: [], forum: [],
-  receipts: [], transactions: [], grades: [], bookings: [], schedule: [], tasks: [],
+  receipts: [], transactions: [], grades: [], bookings: [], schedule: [], tasks: [], codes: [],
   store: [{ id: 1, name: 'كتاب الفيزياء - الجزء الأول', price: 120, icon: '📖' }, { id: 2, name: 'كتاب الرياضيات - الجزء الثاني', price: 150, icon: '' }, { id: 3, name: 'كتاب الكيمياء - الجزء الأول', price: 130, icon: '🧪' }],
   treasury: 0,
   barcodes: { 'أولى ثانوي': 'G1-2026', 'ثانية ثانوي': 'G2-2026', 'ثالثة ثانوي': 'G3-2026', 'صف احتياطي 1': 'GX1-2026', 'صف احتياطي 2': 'GX2-2026', 'صف احتياطي 3': 'GX3-2026' },
@@ -964,7 +996,73 @@ function loadDB() {
     if (!DB.contents) DB.contents = [];
     if (!DB.transactions) DB.transactions = [];
     if (!DB.store) DB.store = [];
+    if (!DB.codes) DB.codes = [];
+    if (!DB.adminCredentialsReset) {
+      DB.admin = { username: 'admin', password: 'admin123' };
+      DB.adminCredentialsReset = true;
+      localStorage.setItem('platformDB', JSON.stringify(DB));
+    }
   }
+}
+
+function exportBackup() {
+  const dataStr = JSON.stringify(DB, null, 2);
+  const blob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0, 10);
+  a.href = url; a.download = `نسخة-احتياطية-${date}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('✅ تم تصدير النسخة الاحتياطية بنجاح');
+}
+
+function importBackup() {
+  document.getElementById('importBackupFile').click();
+}
+
+function handleImportBackup(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function (ev) {
+    try {
+      const imported = JSON.parse(ev.target.result);
+      if (!imported || !Array.isArray(imported.students) || !Array.isArray(imported.courses)) {
+        showToast('❌ ملف النسخة الاحتياطية غير صالح', 'error'); return;
+      }
+      if (!confirm('سيتم استبدال جميع البيانات الحالية بالنسخة المستوردة. هل أنت متأكد؟')) return;
+      DB = imported;
+      if (!DB.barcodes) DB.barcodes = {};
+      if (!DB.contents) DB.contents = [];
+      if (!DB.transactions) DB.transactions = [];
+      if (!DB.store) DB.store = [];
+      if (!DB.codes) DB.codes = [];
+      saveDB();
+      renderAdminDashboard();
+      showToast('✅ تم استيراد النسخة الاحتياطية بنجاح');
+    } catch (err) {
+      showToast('❌ فشل قراءة الملف - تأكد أنه ملف نسخة احتياطية صحيح', 'error');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function exportStudentsExcel() {
+  if (DB.students.length === 0) { showToast('لا يوجد طلاب لتصديرهم', 'error'); return; }
+  const headers = ['الاسم', 'الهاتف', 'الصف', 'الاشتراك', 'تاريخ التسجيل', 'عدد مرات الدخول', 'الرصيد', 'الحالة'];
+  const rows = DB.students.map(s => [
+    s.name, s.phone, s.grade, s.subscription || '-',
+    new Date(s.registeredAt).toLocaleDateString('ar-EG'),
+    s.loginCount, s.balance || 0, s.isActive ? 'نشط' : 'غير نشط'
+  ]);
+  let csv = '\uFEFF' + headers.join(',') + '\n' + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'بيانات-الطلاب.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  showToast('✅ تم تصدير بيانات الطلاب (يفتح مباشرة في Excel)');
 }
 
 function getDeviceId() {
@@ -992,6 +1090,23 @@ function adminLogin(e) {
   document.getElementById('adminDashboard').classList.add('active');
   renderAdminDashboard();
   showToast('مرحباً بك يا مستر علاء');
+}
+
+function changeAdminCredentials(e) {
+  e.preventDefault();
+  const currentPassword = document.getElementById('currentAdminPassword').value;
+  const newUsername = document.getElementById('newAdminUsername').value.trim();
+  const newPassword = document.getElementById('newAdminPassword').value;
+  const confirmPassword = document.getElementById('confirmAdminPassword').value;
+  if (currentPassword !== DB.admin.password) { showToast('❌ كلمة السر الحالية غير صحيحة', 'error'); return; }
+  if (!newUsername && !newPassword) { showToast('لم يتم تغيير أي شيء - املأ الحقول المطلوب تغييرها', 'error'); return; }
+  if (newPassword && newPassword !== confirmPassword) { showToast('❌ كلمة السر الجديدة وتأكيدها غير متطابقين', 'error'); return; }
+  if (newPassword && newPassword.length < 4) { showToast('❌ كلمة السر الجديدة قصيرة جدًا (4 أحرف على الأقل)', 'error'); return; }
+  if (newUsername) DB.admin.username = newUsername;
+  if (newPassword) DB.admin.password = newPassword;
+  saveDB();
+  e.target.reset();
+  showToast('✅ تم تحديث بيانات الدخول بنجاح');
 }
 
 function studentLogin(e) {
@@ -1145,7 +1260,26 @@ function renderSubscriptions() {
 function renderStore() {
   const list = document.getElementById('storeList');
   if (DB.store.length === 0) { list.innerHTML = '<p style="color:#888;text-align:center;">لا توجد منتجات</p>'; return; }
-  list.innerHTML = DB.store.map(item => `<div class="store-item"><div class="icon">${item.icon}</div><h4>${item.name}</h4><div class="price">${item.price} ج.م</div><button class="btn btn-primary">🛒 شراء</button></div>`).join('');
+  list.innerHTML = DB.store.map(item => `<div class="store-item"><div class="icon">${item.icon}</div><h4>${item.name}</h4><div class="price">${item.price} ج.م</div><button class="btn btn-danger" onclick="deleteStoreItem(${item.id})">🗑️ حذف</button></div>`).join('');
+}
+
+function addStoreItem(e) {
+  e.preventDefault();
+  const item = {
+    id: Date.now(),
+    name: document.getElementById('newStoreItemName').value.trim(),
+    price: parseInt(document.getElementById('newStoreItemPrice').value) || 0,
+    icon: document.getElementById('newStoreItemIcon').value || '📘'
+  };
+  if (!DB.store) DB.store = [];
+  DB.store.push(item);
+  saveDB(); closeModal('addStoreItemModal'); renderStore(); showToast('✅ تم إضافة الكتاب/الملزمة'); e.target.reset();
+}
+
+function deleteStoreItem(id) {
+  if (!confirm('هل تريد حذف هذا الكتاب/الملزمة من المتجر؟')) return;
+  DB.store = DB.store.filter(i => i.id !== id);
+  saveDB(); renderStore(); showToast('🗑️ تم الحذف');
 }
 
 function renderTreasury() {
@@ -1184,7 +1318,7 @@ function uploadReceiptAdmin(e) {
   const student = DB.students.find(s => s.id === studentId);
   const course = DB.courses.find(c => c.id === courseId);
   if (!student || !course) return;
-  const receipt = { id: Date.now(), studentId, courseId, amount, method, status: 'approved', date: new Date().toISOString() };
+  const receipt = { id: Date.now(), studentId, courseId, amount, method, type: 'course', status: 'approved', date: new Date().toISOString() };
   DB.receipts.push(receipt);
   if (!student.paidCourses) student.paidCourses = [];
   if (!student.paidCourses.includes(courseId)) student.paidCourses.push(courseId);
@@ -1200,7 +1334,44 @@ function renderReceiptsList() {
   courseSelect.innerHTML = '<option value="">اختر الدورة</option>' + DB.courses.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
   const list = document.getElementById('receiptsList');
   if (DB.receipts.length === 0) { list.innerHTML = '<p style="color:#888;text-align:center;">لا توجد إيصالات</p>'; return; }
-  list.innerHTML = '<table><thead><tr><th>التاريخ</th><th>الطالب</th><th>الدورة</th><th>المبلغ</th><th>الحالة</th></tr></thead><tbody>' + DB.receipts.map(r => { const student = DB.students.find(s => s.id === r.studentId); const course = DB.courses.find(c => c.id === r.courseId); return `<tr><td>${new Date(r.date).toLocaleDateString('ar-EG')}</td><td>${student ? student.name : '-'}</td><td>${course ? course.name : '-'}</td><td>${r.amount} ج.م</td><td><span style="color:#27ae60;">✅ معتمد</span></td></tr>`; }).join('') + '</tbody></table>';
+  const sorted = [...DB.receipts].sort((a, b) => new Date(b.date) - new Date(a.date));
+  list.innerHTML = '<table><thead><tr><th>التاريخ</th><th>الطالب</th><th>الدورة/الباقة</th><th>المبلغ</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>' + sorted.map(r => {
+    const student = DB.students.find(s => s.id === r.studentId);
+    const label = r.type === 'subscription' ? ('👑 باقة ' + (r.subscriptionName || '-')) : (DB.courses.find(c => c.id === r.courseId)?.name || '-');
+    let statusHTML, actionHTML = '';
+    if (r.status === 'approved') { statusHTML = '<span style="color:#27ae60;">✅ معتمد</span>'; }
+    else if (r.status === 'rejected') { statusHTML = '<span style="color:#e74c3c;">❌ مرفوض</span>'; }
+    else { statusHTML = '<span style="color:#ff9800;">⏳ قيد المراجعة</span>'; actionHTML = `<button class="btn btn-success" style="padding:6px 10px;font-size:12px;" onclick="approveReceipt(${r.id})">✅ اعتماد</button> <button class="btn btn-danger" style="padding:6px 10px;font-size:12px;" onclick="rejectReceipt(${r.id})">❌ رفض</button>`; }
+    return `<tr><td>${new Date(r.date).toLocaleDateString('ar-EG')}</td><td>${student ? student.name : '-'}</td><td>${label}</td><td>${r.amount} ج.م</td><td>${statusHTML}</td><td>${actionHTML}</td></tr>`;
+  }).join('') + '</tbody></table>';
+}
+
+function approveReceipt(id) {
+  const receipt = DB.receipts.find(r => r.id === id);
+  if (!receipt || receipt.status !== 'pending') return;
+  const student = DB.students.find(s => s.id === receipt.studentId);
+  if (!student) { showToast('الطالب غير موجود', 'error'); return; }
+  if (!student.paidCourses) student.paidCourses = [];
+  if (receipt.type === 'subscription') {
+    student.subscription = receipt.subscriptionName;
+    // الاشتراك في أي باقة يفتح كل دورات صف الطالب
+    DB.courses.filter(c => c.grades.includes(student.grade)).forEach(c => { if (!student.paidCourses.includes(c.id)) student.paidCourses.push(c.id); });
+  } else {
+    if (!student.paidCourses.includes(receipt.courseId)) student.paidCourses.push(receipt.courseId);
+  }
+  receipt.status = 'approved';
+  DB.treasury += receipt.amount;
+  const course = DB.courses.find(c => c.id === receipt.courseId);
+  DB.transactions.push({ date: new Date().toISOString(), type: '📄 إيصال طالب', amount: receipt.amount, desc: `${student.name} - ${receipt.type === 'subscription' ? 'باقة ' + receipt.subscriptionName : (course ? course.name : '')}`, balanceAfter: DB.treasury });
+  saveDB(); renderReceiptsList(); showToast('✅ تم اعتماد الإيصال وتفعيل ' + (receipt.type === 'subscription' ? 'الاشتراك' : 'الدورة') + ' للطالب');
+}
+
+function rejectReceipt(id) {
+  const receipt = DB.receipts.find(r => r.id === id);
+  if (!receipt || receipt.status !== 'pending') return;
+  if (!confirm('هل تريد رفض هذا الإيصال؟')) return;
+  receipt.status = 'rejected';
+  saveDB(); renderReceiptsList(); showToast('تم رفض الإيصال');
 }
 
 function renderExamsList() { const list = document.getElementById('examsList'); if (DB.exams.length === 0) { list.innerHTML = '<p style="color:#888;text-align:center;">لا توجد امتحانات</p>'; return; } list.innerHTML = DB.exams.map(ex => `<div class="course-card"><div class="course-icon">📝</div><div class="course-info"><h4>${ex.title}</h4><p>${ex.course || 'عام'}</p></div></div>`).join(''); }
@@ -1254,9 +1425,30 @@ function renderStudentSection(section) {
 function renderStudentHome() {
   const student = currentUser.data;
   const courses = DB.courses.filter(c => c.grades.includes(student.grade));
+  const paidCount = courses.filter(c => student.paidCourses && student.paidCourses.includes(c.id)).length;
+  document.getElementById('studentTotalCoursesCount').textContent = courses.length;
+  document.getElementById('studentActiveCoursesCount').textContent = paidCount;
   const list = document.getElementById('studentCoursesList');
   if (courses.length === 0) { list.innerHTML = '<p style="color:#888;text-align:center;">لا توجد دورات متاحة لصفك حالياً</p>'; return; }
   list.innerHTML = courses.map(c => { const isPaid = student.paidCourses && student.paidCourses.includes(c.id); return `<div class="course-card" onclick="openCourseForStudent(${c.id})"><div class="course-icon">${c.icon}</div><div class="course-info"><h4>${c.name}</h4><p>${isPaid ? '✅ مفعلة' : '💰 تحتاج دفع ' + c.price + ' ج.م'}</p></div><div class="course-price">${c.price} ج.م</div></div>`; }).join('');
+}
+
+function redeemCode() {
+  const input = document.getElementById('redeemCodeInput').value.trim().toUpperCase();
+  if (!input) { showToast('يرجى إدخال الكود', 'error'); return; }
+  const student = currentUser.data;
+  if (!DB.codes) DB.codes = [];
+  const codeObj = DB.codes.find(c => c.code === input);
+  if (!codeObj) { showToast('❌ الكود غير صحيح', 'error'); return; }
+  if (codeObj.used) { showToast('❌ هذا الكود تم استخدامه من قبل', 'error'); return; }
+  if (codeObj.expiry && new Date(codeObj.expiry) < new Date()) { showToast('❌ الكود منتهي الصلاحية', 'error'); return; }
+  if (!student.paidCourses) student.paidCourses = [];
+  if (!student.paidCourses.includes(codeObj.courseId)) student.paidCourses.push(codeObj.courseId);
+  codeObj.used = true; codeObj.usedByStudentId = student.id; codeObj.usedAt = new Date().toISOString();
+  saveDB();
+  document.getElementById('redeemCodeInput').value = '';
+  showToast('✅ تم تفعيل الدورة بنجاح');
+  renderStudentHome();
 }
 
 function renderMyCourses() {
@@ -1321,18 +1513,55 @@ function renderStudentWallet() { const student = currentUser.data; document.getE
 function renderStudentSubscriptions() { const grid = document.getElementById('studentSubscriptionsGrid'); grid.innerHTML = DB.subscriptions.map((sub, idx) => { const medalClass = idx === 0 ? 'bronze' : idx === 1 ? 'silver' : 'gold'; return `<div class="subscription-card ${medalClass}"><div class="medal">${sub.medal}</div><h3>باقة ${sub.name}</h3><div class="price">${sub.price} ج.م <small>/ شهرياً</small></div><ul>${sub.features.map(f => `<li>${f}</li>`).join('')}</ul><button class="btn btn-primary" onclick="subscribe('${sub.name}')">اشتراك</button></div>`; }).join(''); }
 function renderStudentStore() { const list = document.getElementById('studentStoreList'); if (DB.store.length === 0) { list.innerHTML = '<p style="color:#888;text-align:center;">لا توجد منتجات</p>'; return; } list.innerHTML = DB.store.map(item => `<div class="store-item"><div class="icon">${item.icon}</div><h4>${item.name}</h4><div class="price">${item.price} ج.م</div><button class="btn btn-primary">🛒 شراء</button></div>`).join(''); }
 function renderStudentQuestionBank() { document.getElementById('studentQuestionBankList').innerHTML = '<p style="color:#888;text-align:center;">💡 بنك الأسئلة متاح للجميع</p>'; }
-function renderStudentReceiptForm() { const student = currentUser.data; const courses = DB.courses.filter(c => c.grades.includes(student.grade)); document.getElementById('receiptCourse').innerHTML = '<option value="">اختر الدورة</option>' + courses.map(c => `<option value="${c.id}">${c.name} - ${c.price} ج.م</option>`).join(''); }
+function renderStudentReceiptForm() {
+  const student = currentUser.data;
+  const courses = DB.courses.filter(c => c.grades.includes(student.grade));
+  document.getElementById('receiptCourse').innerHTML = '<option value="">اختر الدورة</option>' + courses.map(c => `<option value="${c.id}">${c.name} - ${c.price} ج.م</option>`).join('');
+  document.getElementById('receiptSubscriptionName').innerHTML = '<option value="">اختر الباقة</option>' + DB.subscriptions.map(s => `<option value="${s.name}">باقة ${s.name} - ${s.price} ج.م</option>`).join('');
+  document.getElementById('receiptType').value = 'course';
+  toggleReceiptType();
+}
+
+function toggleReceiptType() {
+  const type = document.getElementById('receiptType').value;
+  const courseGroup = document.getElementById('receiptCourseGroup');
+  const subGroup = document.getElementById('receiptSubscriptionGroup');
+  const courseSelect = document.getElementById('receiptCourse');
+  const subSelect = document.getElementById('receiptSubscriptionName');
+  if (type === 'subscription') {
+    courseGroup.classList.add('hidden'); subGroup.classList.remove('hidden');
+    courseSelect.required = false; subSelect.required = true;
+  } else {
+    courseGroup.classList.remove('hidden'); subGroup.classList.add('hidden');
+    courseSelect.required = true; subSelect.required = false;
+  }
+}
 
 function uploadReceipt(e) {
   e.preventDefault();
   const student = currentUser.data;
-  const courseId = parseInt(document.getElementById('receiptCourse').value);
+  const type = document.getElementById('receiptType').value;
   const amount = parseInt(document.getElementById('receiptAmount').value);
   const method = document.getElementById('receiptMethod').value;
-  const receipt = { id: Date.now(), studentId: student.id, courseId, amount, method, status: 'pending', date: new Date().toISOString() };
+  const receipt = { id: Date.now(), studentId: student.id, type, amount, method, status: 'pending', date: new Date().toISOString() };
+  if (type === 'subscription') {
+    receipt.subscriptionName = document.getElementById('receiptSubscriptionName').value;
+    if (!receipt.subscriptionName) { showToast('يرجى اختيار باقة الاشتراك', 'error'); return; }
+  } else {
+    receipt.courseId = parseInt(document.getElementById('receiptCourse').value);
+    if (!receipt.courseId) { showToast('يرجى اختيار الدورة', 'error'); return; }
+  }
   DB.receipts.push(receipt); saveDB(); showToast('✅ تم رفع الإيصال - سيتم التفعيل بعد مراجعة المدير'); e.target.reset();
+  toggleReceiptType();
 }
-function subscribe(name) { showToast('يرجى رفع إيصال الدفع للاشتراك في باقة ' + name); showStudentSection('uploadReceipt', document.querySelector('#studentDashboard .menu-item:nth-child(10)')); }
+
+function subscribe(name) {
+  showStudentSection('uploadReceipt', document.querySelector('#studentDashboard .menu-item:nth-child(10)'));
+  document.getElementById('receiptType').value = 'subscription';
+  toggleReceiptType();
+  document.getElementById('receiptSubscriptionName').value = name;
+  showToast('يرجى رفع إيصال الدفع لتفعيل باقة ' + name);
+}
 
 function openModal(id) { document.getElementById(id).classList.add('active'); }
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
@@ -1355,7 +1584,34 @@ document.addEventListener('dragstart', function(e) { if (e.target.closest('.prot
 function addExam(e) { e.preventDefault(); const exam = { id: Date.now(), title: document.getElementById('newExamTitle').value, course: document.getElementById('newExamCourse').value, type: document.getElementById('newExamType').value, price: parseInt(document.getElementById('newExamPrice').value) || 0, date: document.getElementById('newExamDate').value, maxGrade: parseInt(document.getElementById('newExamMaxGrade').value), shuffle: document.getElementById('newExamShuffle').value }; DB.exams.push(exam); saveDB(); closeModal('addExamModal'); renderExamsList(); showToast('تم إضافة الامتحان'); e.target.reset(); }
 function addHomework(e) { e.preventDefault(); const homework = { id: Date.now(), title: document.getElementById('newHomeworkTitle').value, course: document.getElementById('newHomeworkCourse').value, desc: document.getElementById('newHomeworkDesc').value, deadline: document.getElementById('newHomeworkDeadline').value }; DB.homework.push(homework); saveDB(); closeModal('addHomeworkModal'); renderHomeworkList(); showToast('تم إضافة الواجب'); e.target.reset(); }
 function addTopic(e) { e.preventDefault(); const topic = { id: Date.now(), title: document.getElementById('newTopicTitle').value, section: document.getElementById('newTopicSection').value, content: document.getElementById('newTopicContent').value }; DB.forum.push(topic); saveDB(); closeModal('addTopicModal'); renderForumList(); showToast('تم نشر الموضوع'); e.target.reset(); }
-function generateCode(e) { e.preventDefault(); const code = 'CODE-' + Math.random().toString(36).substr(2, 8).toUpperCase(); document.getElementById('generatedCode').textContent = code; closeModal('generateCodeModal'); openModal('showCodeModal'); e.target.reset(); }
+function generateSecureCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no ambiguous 0/O/1/I
+  const bytes = new Uint32Array(16);
+  crypto.getRandomValues(bytes);
+  let out = [];
+  for (let g = 0; g < 4; g++) {
+    let group = '';
+    for (let i = 0; i < 4; i++) group += chars[bytes[g * 4 + i] % chars.length];
+    out.push(group);
+  }
+  return out.join('-'); // e.g. XJ4K-9QRT-2M7Y-VB3H (16 chars, high entropy, one-time use)
+}
+
+function generateCode(e) {
+  e.preventDefault();
+  const studentName = document.getElementById('codeStudentName').value.trim();
+  const courseId = parseInt(document.getElementById('codeStudentCourse').value);
+  const expiry = document.getElementById('codeExpiryDate').value;
+  const course = DB.courses.find(c => c.id === courseId);
+  if (!course) { showToast('يرجى اختيار الدورة', 'error'); return; }
+  let code;
+  do { code = generateSecureCode(); } while (DB.codes.some(c => c.code === code));
+  if (!DB.codes) DB.codes = [];
+  DB.codes.push({ code, studentName, courseId, expiry, used: false, createdAt: new Date().toISOString() });
+  saveDB();
+  document.getElementById('generatedCode').textContent = code;
+  closeModal('generateCodeModal'); openModal('showCodeModal'); e.target.reset();
+}
 function copyCode() { const code = document.getElementById('generatedCode').textContent; navigator.clipboard.writeText(code); showToast('تم نسخ الكود'); }
 function addBooking(e) { e.preventDefault(); const booking = { id: Date.now(), studentName: document.getElementById('bookingStudentName').value, phone: document.getElementById('bookingPhone').value, course: document.getElementById('bookingCourse').value, date: document.getElementById('bookingDate').value, zoomLink: document.getElementById('bookingZoomLink').value }; DB.bookings.push(booking); saveDB(); closeModal('addBookingModal'); renderBookingList(); showToast('تم إضافة الحجز'); e.target.reset(); }
 function addSchedule(e) { e.preventDefault(); const schedule = { id: Date.now(), day: document.getElementById('scheduleDay').value, courseId: parseInt(document.getElementById('scheduleCourse').value), time: document.getElementById('scheduleTime').value }; DB.schedule.push(schedule); saveDB(); closeModal('addScheduleModal'); renderSchedule(); showToast('تم إضافة الحصة'); e.target.reset(); }
