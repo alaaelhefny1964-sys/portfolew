@@ -1335,17 +1335,36 @@ function saveDB(){
   }
 }
 /* تنظيف يدوي للصور من الإعدادات (يحرر مساحة كبيرة مع بقاء كل النصوص) */
+function clearLocalDuplicates(){
+  let n = 0;
+  try {
+    const kill = [];
+    for(let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i);
+      if(k && (k.indexOf(DB_KEY + '_preUpgrade_') === 0 || k.indexOf(DB_KEY + '_preImport_') === 0 || k === 'cloudCatalog')) kill.push(k);
+    }
+    kill.forEach(k => { try { localStorage.removeItem(k); n++; } catch(e){} });
+  } catch(e){}
+  return n;
+}
 function compactStorage(){
   if(!confirm('سيتم حذف كل صور الإيصالات وأغلفة الدورات وصورة المدرس من هذا الجهاز لتحرير المساحة (النصوص والدرجات والأكواد لا تُمس). متابعة؟')) return;
   exportBackup();
+  const dup = clearLocalDuplicates();
   let n = 0;
   DB.receipts.forEach(r => { if(r.image){ r.image = null; n++; } });
   DB.courses.forEach(c => { if(c.cover){ c.cover = ''; n++; } });
   if(DB.settings.teacherPhoto){ DB.settings.teacherPhoto = ''; n++; }
   DB.audit = (DB.audit || []).slice(-200);
-  saveDB();
+  const before = (localStorage.getItem(DB_KEY) || '').length;
+  const saved = saveDB();
+  const after = (localStorage.getItem(DB_KEY) || '').length;
   try { renderSettings(); } catch(e){}
-  showToast('✅ تم تحرير المساحة — حُذفت ' + n + ' صورة (تم تصدير نسخة احتياطية أولاً)');
+  if(!saved){
+    showToast('❌ التنظيف لم يحرر مساحة كافية (' + Math.round(before / 1024) + 'KB). الحل: افتح رابط الاستضافة (تخزين جديد فارغ) واستورد نسختك الاحتياطية هناك.', 'error', 10000);
+    return;
+  }
+  showToast('✅ تم تحرير المساحة — حُذفت ' + n + ' صورة و' + dup + ' نسخة مكررة (من ' + Math.round(before / 1024) + ' إلى ' + Math.round(after / 1024) + 'KB)', 'success', 7000);
 }
 
 function loadDB(){
@@ -1360,9 +1379,12 @@ function loadDB(){
   } else {
     DB = defaultDB();
   }
-  // نسخة احتياطية تلقائية قبل أي ترحيل
+  // نسخة احتياطية تلقائية قبل أي ترحيل (نحتفظ بنسخة واحدة فقط حتى لا تمتلئ الذاكرة)
   if(migrated){
-    try { localStorage.setItem(DB_KEY + '_preUpgrade_' + Date.now(), saved); } catch(e){}
+    try {
+      clearLocalDuplicates();
+      localStorage.setItem(DB_KEY + '_preUpgrade_' + Date.now(), saved);
+    } catch(e){}
   }
   saveDB();
   return migrated;
@@ -3500,8 +3522,8 @@ function handleImportBackup(ev){
         showToast('❌ ملف النسخة الاحتياطية غير صالح', 'error'); return;
       }
       if(!confirm('سيتم استبدال جميع البيانات الحالية بالنسخة المستوردة (مع الترحيل التلقائي). هل أنت متأكد؟')) return;
-      // نسخة أمان من الحالية قبل الاستبدال
-      try { localStorage.setItem(DB_KEY + '_preImport_' + Date.now(), localStorage.getItem(DB_KEY) || ''); } catch(e2){}
+      // نسخة أمان من الحالية قبل الاستبدال (نسخة واحدة فقط)
+      try { clearLocalDuplicates(); localStorage.setItem(DB_KEY + '_preImport_' + Date.now(), localStorage.getItem(DB_KEY) || ''); } catch(e2){}
       DB = migrateDB(imported);
       saveDB();
       audit('استيراد نسخة احتياطية', '');
@@ -4119,7 +4141,7 @@ document.addEventListener('dragstart', e => { if(e.target.closest('.protected-co
    - التسجيل/التفعيل/الإيصالات/النتائج تُرسل للشيت ثم تُحفظ محلياً
    - عند غياب الرابط أو انقطاع النت: fallback محلي كامل
    ================================================================ */
-const DEFAULT_CLOUD_URL = 'https://script.google.com/macros/s/AKfycbySMoMblFP9EwF72SKXDI43_y5ZiqcFhG0CyDv5kPGCIqsTFa9cb3JeKbrvFFwRqp9K/exec';
+const DEFAULT_CLOUD_URL = 'https://script.google.com/macros/s/AKfycbzrJvTXy7v0vwyNyGmv4jaT6V2AJp35SElVLsHwuI7lZYjwmkMg0mOg-5aHewG8VIaO/exec';
 const PLATFORM_BUILD = 'v6-2026-10-17';
 function cloudCfg(){
   try {
@@ -4136,7 +4158,12 @@ function saveCloudSettings(){
   const secret = el('cloudSecret').value.trim();
   const enabled = el('cloudEnabled').value === 'on';
   if(enabled && !url){ showToast('❌ الصق رابط الـ Web App أولاً', 'error'); return; }
-  try { localStorage.setItem('cloudCfg', JSON.stringify({ url, secret, enabled })); } catch(e){}
+  try { localStorage.setItem('cloudCfg', JSON.stringify({ url, secret, enabled })); }
+  catch(e){ showToast('❌ تعذّر الحفظ — تخزين المتصفح ممتلئ. صدّر نسخة احتياطية ثم اضغط (تنظيف الصور) وأعد الحفظ.', 'error', 8000); return; }
+  const verify = cloudCfg();
+  if(verify.secret !== secret || verify.url !== url || verify.enabled !== enabled){
+    showToast('❌ لم يُحفظ الإعداد — التخزين ممتلئ. صدّر نسخة احتياطية ثم (تنظيف الصور) وأعد الحفظ.', 'error', 8000); return;
+  }
   showToast(enabled ? '✅ تم تفعيل الربط السحابي' : '💾 تم الحفظ — الوضع المحلي');
   renderCloudStatus();
   if(enabled) cloudRefreshCatalog(true);
@@ -4157,8 +4184,8 @@ function resetCloudUrl(){
   renderCloudStatus();
   showToast('↺ تمت إعادة الرابط الافتراضي — اضغط حفظ الربط ثم سحب نسخة');
 }
-async function cloudCall(params, timeoutMs){
-  const c = cloudCfg();
+async function cloudCall(params, timeoutMs, cfgIn){
+  const c = cfgIn || cloudCfg();
   if(!c.enabled || !c.url) throw new Error('cloud-off');
   const qs = Object.keys(params).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(params[k] == null ? '' : String(params[k]))).join('&');
   const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
@@ -4210,20 +4237,20 @@ async function testCloudFull(){
   const box = el('cloudStatus');
   const say = t => { if(box) box.innerHTML += '<br>' + esc(t); };
   if(box) box.innerHTML = '🩺 بدء التشخيص...';
-  const c = cloudCfg();
+  const c = liveCfg();
   say('1) الرابط: ' + (c.url ? c.url.slice(0, 80) + '…' : 'فارغ ❌'));
   say('2) السر: ' + (c.secret ? 'موجود (' + c.secret.length + ' حرفاً)' : 'فارغ ❌'));
   say('3) إصدار الملف: ' + PLATFORM_BUILD);
   try {
-    const p = await cloudCall({ action: 'ping' }, 12000);
+    const p = await cloudCall({ action: 'ping' }, 12000, c);
     say('4) ping: ' + (p && p.ok ? '✅ يعمل' : '❌ رد غريب'));
   } catch(e){ say('4) ping: ❌ ' + String(e.message || e)); return; }
   try {
-    const cat = await cloudCall({ action: 'catalog' }, 15000);
+    const cat = await cloudCall({ action: 'catalog' }, 15000, c);
     say('5) الكتالوج: ✅ دورات=' + (cat.courses || []).length + ' محتوى=' + (cat.contents || []).length + ' امتحانات=' + (cat.exams || []).length);
   } catch(e){ say('5) الكتالوج: ❌ ' + String(e.message || e)); return; }
   try {
-    const r = await cloudCall({ action: 'adminPull', secret: c.secret }, 25000);
+    const r = await cloudCall({ action: 'adminPull', secret: c.secret }, 25000, c);
     if(r && r.ok) say('6) السحب بالسر: ✅ يعمل — طلاب=' + (r.dump.students || []).length + ' إيصالات=' + (r.dump.receipts || []).length + ' حجوزات=' + (r.dump.bookings || []).length);
     else say('6) السحب بالسر: ❌ ' + ((r && r.error) || 'رد غريب') + (r && r.error === 'forbidden' ? ' — السر غير مطابق' : ''));
   } catch(e){ say('6) السحب بالسر: ❌ ' + String(e.message || e)); }
@@ -4234,14 +4261,25 @@ async function testCloudConnection(){
     showToast(r && r.ok ? '✅ الاتصال بالشيت يعمل' : '❌ رد غير متوقع من الشيت', r && r.ok ? 'success' : 'error');
   } catch(e){ showToast('❌ فشل الاتصال — تحقق من الرابط والنشر (Anyone)', 'error'); }
 }
-async function cloudPushSheet(sheet, rows){
+/* قراءة حية: القيم المكتوبة في حقول الإعدادات تُستخدم فوراً حتى بدون حفظ (للحالات التي يمتلئ فيها التخزين) */
+function liveCfg(){
   const c = cloudCfg();
+  try {
+    const u = el('cloudUrl') && el('cloudUrl').value.trim();
+    const s = el('cloudSecret') && el('cloudSecret').value.trim();
+    if(u) c.url = u;
+    if(s) c.secret = s;
+  } catch(e){}
+  return c;
+}
+async function cloudPushSheet(sheet, rows){
+  const c = liveCfg();
   if(!c.enabled || !c.url || !c.secret) return { ok: false, error: 'cloud-off' };
   const CH = 20;
   let pushed = 0;
   for(let i = 0; i < rows.length; i += CH){
     const chunk = rows.slice(i, i + CH);
-    const r = await cloudCall({ action: 'adminPush', secret: c.secret, sheet, rows: JSON.stringify(chunk) }, 20000);
+    const r = await cloudCall({ action: 'adminPush', secret: c.secret, sheet, rows: JSON.stringify(chunk) }, 20000, c);
     if(!r || !r.ok) throw new Error((r && r.error) || 'push-failed');
     pushed += chunk.length;
   }
@@ -4261,8 +4299,8 @@ async function cloudPushCatalog(){
 }
 async function cloudPullToLocal(){
   try {
-    const c = cloudCfg();
-    const r = await cloudCall({ action: 'adminPull', secret: c.secret }, 25000);
+    const c = liveCfg();
+    const r = await cloudCall({ action: 'adminPull', secret: c.secret }, 25000, c);
     if(!r || !r.ok || !r.dump) throw new Error((r && r.error) || 'pull-failed');
     const d = r.dump;
     if(d.courses) DB.courses = d.courses;
@@ -4309,7 +4347,7 @@ function mergeById(localArr, cloudArr){
 /* سحب خلفية للمدير: طلاب/إيصالات/حجوزات/طلبات/محاولات/أكواد الجديدة */
 async function cloudPullNew(silent){
   try {
-    const c = cloudCfg();
+    const c = liveCfg();
     if(!c.enabled || !c.url || !c.secret){
       if(c.enabled && c.url && !c.secret && !window._secretWarned){
         window._secretWarned = true;
@@ -4320,7 +4358,7 @@ async function cloudPullNew(silent){
     const now = Date.now();
     if(window._lastPullAt && now - window._lastPullAt < 30000) return false;
     window._lastPullAt = now;
-    const r = await cloudCall({ action: 'adminPull', secret: c.secret }, 25000);
+    const r = await cloudCall({ action: 'adminPull', secret: c.secret }, 25000, c);
     if(!r || !r.ok || !r.dump) throw new Error((r && r.error) || 'pull-failed');
     const d = r.dump;
     let changed = 0;
