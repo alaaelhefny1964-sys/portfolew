@@ -705,6 +705,7 @@ table tr:last-child td{border-bottom:none}
           <button class="btn btn-primary" onclick="exportBackup()">📥 تصدير نسخة احتياطية</button>
           <button class="btn btn-success" onclick="importBackup()">📤 استيراد نسخة</button>
           <button class="btn btn-info" onclick="exportStudentsExcel()">📊 تصدير الطلاب CSV</button>
+          <button class="btn btn-warning" onclick="compactStorage()">🗑️ تنظيف الصور (تحرير مساحة)</button>
           <input type="file" id="importBackupFile" accept="application/json" style="display:none" onchange="handleImportBackup(event)">
         </div>
       </div>
@@ -719,6 +720,7 @@ table tr:last-child td{border-bottom:none}
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
           <button class="btn btn-primary" onclick="saveCloudSettings()">💾 حفظ الربط</button>
           <button class="btn btn-light" onclick="testCloudConnection()">🔌 اختبار الاتصال</button>
+          <button class="btn btn-light" onclick="testCloudFull()">🩺 تشخيص شامل</button>
           <button class="btn btn-light" onclick="resetCloudUrl()">↺ الرابط الافتراضي</button>
           <button class="btn btn-gold" onclick="cloudPushCatalog()">⬆️ رفع الكتالوج للشيت</button>
           <button class="btn btn-info" onclick="cloudPullToLocal()">⬇️ سحب نسخة للجهاز</button>
@@ -1308,18 +1310,42 @@ function saveDB(){
     return true;
   } catch(err){
     console.error('saveDB failed:', err);
-    // محاولة إنقاذ: حذف أغلفة الدورات الكبيرة ثم إعادة المحاولة
+    // إنقاذ متدرج: صور الإيصالات (الأضخم) ثم الأغلفة ثم تقليم السجلات
     try {
-      DB.courses.forEach(c => { c.cover = ''; });
-      DB.settings.teacherPhoto = '';
-      localStorage.setItem(DB_KEY, JSON.stringify(DB));
-      showToast('⚠️ اقتربت مساحة التخزين من الامتلاء — تم حذف الصور المرفقة تلقائياً لحماية البيانات. صدّر نسخة احتياطية الآن.', 'warn', 6000);
+      let dropped = 0;
+      DB.receipts.forEach(r => { if(r.image){ r.image = null; dropped++; } });
+      try { localStorage.setItem(DB_KEY, JSON.stringify(DB)); }
+      catch(e){
+        DB.courses.forEach(c => { c.cover = ''; });
+        DB.settings.teacherPhoto = '';
+        try { localStorage.setItem(DB_KEY, JSON.stringify(DB)); }
+        catch(e2){
+          DB.audit = (DB.audit || []).slice(-100);
+          DB.notifications = (DB.notifications || []).slice(-100);
+          localStorage.setItem(DB_KEY, JSON.stringify(DB));
+        }
+      }
+      try { renderSettings(); } catch(e){}
+      showToast('⚠️ امتلأ تخزين المتصفح — حُذفت ' + dropped + ' صورة إيصال تلقائياً لحماية البيانات (نصوص الإيصالات محفوظة). صدّر نسخة احتياطية ثم نظّف الصور من الإعدادات.', 'warn', 8000);
       return true;
-    } catch(e2){
-      showToast('❌ فشل حفظ البيانات: مساحة تخزين المتصفح ممتلئة. صدّر نسخة احتياطية فوراً من الإعدادات.', 'error', 8000);
+    } catch(e3){
+      showToast('❌ فشل حفظ البيانات: التخزين ممتلئ تماماً. صدّر نسخة احتياطية فوراً ثم احذف بيانات الموقع من المتصفح.', 'error', 10000);
       return false;
     }
   }
+}
+/* تنظيف يدوي للصور من الإعدادات (يحرر مساحة كبيرة مع بقاء كل النصوص) */
+function compactStorage(){
+  if(!confirm('سيتم حذف كل صور الإيصالات وأغلفة الدورات وصورة المدرس من هذا الجهاز لتحرير المساحة (النصوص والدرجات والأكواد لا تُمس). متابعة؟')) return;
+  exportBackup();
+  let n = 0;
+  DB.receipts.forEach(r => { if(r.image){ r.image = null; n++; } });
+  DB.courses.forEach(c => { if(c.cover){ c.cover = ''; n++; } });
+  if(DB.settings.teacherPhoto){ DB.settings.teacherPhoto = ''; n++; }
+  DB.audit = (DB.audit || []).slice(-200);
+  saveDB();
+  try { renderSettings(); } catch(e){}
+  showToast('✅ تم تحرير المساحة — حُذفت ' + n + ' صورة (تم تصدير نسخة احتياطية أولاً)');
 }
 
 function loadDB(){
@@ -4052,7 +4078,12 @@ function uploadReceipt(ev){
   const file = el('receiptFile').files[0];
   const finish = () => {
     DB.receipts.push(receipt);
-    saveDB();
+    if(!saveDB() && receipt.image){
+      // التخزين ممتلئ: احتفظ بالإيصال كنص بدون الصورة بدل ضياعه
+      receipt.image = null;
+      saveDB();
+      showToast('⚠️ حُفظ الإيصال بدون الصورة لامتلاء التخزين — نظّف الصور من الإعدادات', 'warn', 6000);
+    }
     try {
       cloudCall({ action: 'receipt', studentId: receipt.studentId, type: receipt.type, courseId: receipt.courseId || '', subscriptionName: receipt.subscriptionName || '', amount: receipt.amount, method: receipt.method }, 15000).catch(() => {});
     } catch(e){}
@@ -4063,7 +4094,7 @@ function uploadReceipt(ev){
   if(file){
     if(!file.type.startsWith('image/')){ showToast('الملف يجب أن يكون صورة', 'error'); return; }
     if(file.size > 2 * 1024 * 1024){ showToast('حجم الصورة كبير — الحد الأقصى 2 ميجابايت', 'error'); return; }
-    resizeImageToDataURL(file, 900, 0.7, dataUrl => { receipt.image = dataUrl || null; finish(); });
+    resizeImageToDataURL(file, 700, 0.6, dataUrl => { receipt.image = dataUrl || null; finish(); });
   } else finish();
 }
 
@@ -4174,6 +4205,28 @@ async function cloudRefreshCatalog(silent){
     if(cloudMergeCatalog(r)){ if(!silent) showToast('✅ تم تحديث الكتالوج من الشيت'); return true; }
   } catch(e){ if(!silent) showToast('⚠️ تعذر الوصول للشيت — العمل محلياً', 'warn'); }
   return false;
+}
+async function testCloudFull(){
+  const box = el('cloudStatus');
+  const say = t => { if(box) box.innerHTML += '<br>' + esc(t); };
+  if(box) box.innerHTML = '🩺 بدء التشخيص...';
+  const c = cloudCfg();
+  say('1) الرابط: ' + (c.url ? c.url.slice(0, 80) + '…' : 'فارغ ❌'));
+  say('2) السر: ' + (c.secret ? 'موجود (' + c.secret.length + ' حرفاً)' : 'فارغ ❌'));
+  say('3) إصدار الملف: ' + PLATFORM_BUILD);
+  try {
+    const p = await cloudCall({ action: 'ping' }, 12000);
+    say('4) ping: ' + (p && p.ok ? '✅ يعمل' : '❌ رد غريب'));
+  } catch(e){ say('4) ping: ❌ ' + String(e.message || e)); return; }
+  try {
+    const cat = await cloudCall({ action: 'catalog' }, 15000);
+    say('5) الكتالوج: ✅ دورات=' + (cat.courses || []).length + ' محتوى=' + (cat.contents || []).length + ' امتحانات=' + (cat.exams || []).length);
+  } catch(e){ say('5) الكتالوج: ❌ ' + String(e.message || e)); return; }
+  try {
+    const r = await cloudCall({ action: 'adminPull', secret: c.secret }, 25000);
+    if(r && r.ok) say('6) السحب بالسر: ✅ يعمل — طلاب=' + (r.dump.students || []).length + ' إيصالات=' + (r.dump.receipts || []).length + ' حجوزات=' + (r.dump.bookings || []).length);
+    else say('6) السحب بالسر: ❌ ' + ((r && r.error) || 'رد غريب') + (r && r.error === 'forbidden' ? ' — السر غير مطابق' : ''));
+  } catch(e){ say('6) السحب بالسر: ❌ ' + String(e.message || e)); }
 }
 async function testCloudConnection(){
   try {
