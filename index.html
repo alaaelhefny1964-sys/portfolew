@@ -719,6 +719,7 @@ table tr:last-child td{border-bottom:none}
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
           <button class="btn btn-primary" onclick="saveCloudSettings()">💾 حفظ الربط</button>
           <button class="btn btn-light" onclick="testCloudConnection()">🔌 اختبار الاتصال</button>
+          <button class="btn btn-light" onclick="resetCloudUrl()">↺ الرابط الافتراضي</button>
           <button class="btn btn-gold" onclick="cloudPushCatalog()">⬆️ رفع الكتالوج للشيت</button>
           <button class="btn btn-info" onclick="cloudPullToLocal()">⬇️ سحب نسخة للجهاز</button>
         </div>
@@ -3002,6 +3003,7 @@ function renderReceiptsList(){
       else {
         statusHTML = '<span class="tag tag-orange">⏳ قيد المراجعة</span>';
         actionHTML = `<button class="btn btn-success btn-sm" onclick="approveReceipt('${r.id}')">✅ اعتماد</button> <button class="btn btn-danger btn-sm" onclick="rejectReceipt('${r.id}')">❌ رفض</button>`;
+        if(r.type !== 'subscription' && r.courseId != null) actionHTML += ` <button class="btn btn-gold btn-sm" onclick="codeForReceipt('${r.id}')">🔑 كود</button>`;
       }
       actionHTML += ` <button class="btn btn-primary btn-sm" onclick="printReceipt('${r.id}')">🖨️ طباعة</button>`;
       actionHTML += ` <button class="btn btn-light btn-sm" onclick="deleteReceipt('${r.id}')">🗑️</button>`;
@@ -3064,6 +3066,16 @@ function approveReceipt(id){
   audit('اعتماد إيصال', student.name + ' — ' + fmtMoney(receipt.amount));
   renderReceiptsList(); updateNotifDot();
   showToast('✅ تم اعتماد الإيصال وتفعيل ' + (receipt.type === 'subscription' ? 'الاشتراك' : 'الدورة'));
+}
+/* توليد كود مباشرة من إيصال معلّق (للدورات المفردة) ثم أرسله للطالب */
+function codeForReceipt(id){
+  const receipt = DB.receipts.find(r => String(r.id) === String(id));
+  if(!receipt || receipt.type === 'subscription' || receipt.courseId == null){ showToast('هذا الإيصال يُفعَّل بالاعتماد المباشر', 'warn'); return; }
+  const student = studentById(receipt.studentId);
+  const code = createCourseCode(receipt.courseId, student ? student.name : '', '');
+  el('generatedCode').textContent = code;
+  openModal('showCodeModal');
+  showToast('انسخ الكود وأرسله للطالب — يفتح دورته فور إدخاله');
 }
 function rejectReceipt(id){
   const receipt = DB.receipts.find(r => String(r.id) === String(id));
@@ -4077,6 +4089,7 @@ document.addEventListener('dragstart', e => { if(e.target.closest('.protected-co
    - عند غياب الرابط أو انقطاع النت: fallback محلي كامل
    ================================================================ */
 const DEFAULT_CLOUD_URL = 'https://script.google.com/macros/s/AKfycbySMoMblFP9EwF72SKXDI43_y5ZiqcFhG0CyDv5kPGCIqsTFa9cb3JeKbrvFFwRqp9K/exec';
+const PLATFORM_BUILD = 'v6-2026-10-17';
 function cloudCfg(){
   try {
     const c = JSON.parse(localStorage.getItem('cloudCfg') || '{}');
@@ -4100,10 +4113,18 @@ function saveCloudSettings(){
 function renderCloudStatus(){
   const c = cloudCfg();
   const box = el('cloudStatus');
-  if(box) box.textContent = c.enabled ? '☁️ مفعّل — ' + c.url.slice(0, 60) + '…' : 'محلي فقط — فعّل الرابط للمزامنة بين الأجهزة';
+  if(box) box.textContent = (c.enabled ? '☁️ مفعّل — ' + c.url.slice(0, 60) + '…' : 'محلي فقط — فعّل الرابط للمزامنة بين الأجهزة') + ' | إصدار الملف: ' + PLATFORM_BUILD;
   if(el('cloudUrl') && !el('cloudUrl').value) el('cloudUrl').value = c.url || '';
   if(el('cloudSecret') && !el('cloudSecret').value) el('cloudSecret').value = c.secret || '';
   if(el('cloudEnabled')) el('cloudEnabled').value = c.enabled ? 'on' : 'off';
+}
+function resetCloudUrl(){
+  try {
+    const c = cloudCfg();
+    localStorage.setItem('cloudCfg', JSON.stringify({ url: DEFAULT_CLOUD_URL, secret: c.secret || '', enabled: true }));
+  } catch(e){}
+  renderCloudStatus();
+  showToast('↺ تمت إعادة الرابط الافتراضي — اضغط حفظ الربط ثم سحب نسخة');
 }
 async function cloudCall(params, timeoutMs){
   const c = cloudCfg();
@@ -4236,7 +4257,13 @@ function mergeById(localArr, cloudArr){
 async function cloudPullNew(silent){
   try {
     const c = cloudCfg();
-    if(!c.enabled || !c.url || !c.secret) return false;
+    if(!c.enabled || !c.url || !c.secret){
+      if(c.enabled && c.url && !c.secret && !window._secretWarned){
+        window._secretWarned = true;
+        showToast('⚠️ السحب من الشيت يحتاج الرمز السري — أدخله في الإعدادات ← الربط السحابي', 'warn', 7000);
+      }
+      return false;
+    }
     const now = Date.now();
     if(window._lastPullAt && now - window._lastPullAt < 30000) return false;
     window._lastPullAt = now;
