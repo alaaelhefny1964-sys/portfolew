@@ -333,6 +333,7 @@ table tr:last-child td{border-bottom:none}
       <button class="menu-item active" onclick="showAdminSection('dashboard', this)"><div class="left"><span class="icon">📊</span><span class="label">لوحة التحكم</span></div></button>
       <button class="menu-item" onclick="showAdminSection('courses', this)"><div class="left"><span class="icon">📚</span><span class="label">الدورات</span></div><span class="badge" id="menuCoursesCount">0</span></button>
       <button class="menu-item" onclick="showAdminSection('content', this)"><div class="left"><span class="icon">🎬</span><span class="label">مكتبة المحتوى</span></div></button>
+      <button class="menu-item" onclick="showAdminSection('codes', this)"><div class="left"><span class="icon">🔑</span><span class="label">الأكواد</span></div><span class="badge" id="menuCodesCount">0</span></button>
       <button class="menu-item" onclick="showAdminSection('students', this)"><div class="left"><span class="icon">👨‍🎓</span><span class="label">الطلاب</span></div><span class="badge green" id="menuStudentsCount">0</span></button>
       <button class="menu-item" onclick="showAdminSection('attendance', this)"><div class="left"><span class="icon">✅</span><span class="label">الحضور</span></div></button>
       <button class="menu-item" onclick="showAdminSection('exams', this)"><div class="left"><span class="icon">📝</span><span class="label">الامتحانات</span></div></button>
@@ -358,7 +359,7 @@ table tr:last-child td{border-bottom:none}
 
   <main class="main-content">
     <div class="topbar">
-      <h2 id="sectionTitle">📊 لوحة التحكم</h2>
+      <div style="display:flex;align-items:center;gap:10px"><button class="sidebar-toggle" onclick="document.getElementById('adminSidebar').classList.toggle('collapsed')">☰</button><h2 id="sectionTitle">📊 لوحة التحكم</h2></div>
       <div class="user-info">
         <button class="bell-btn" onclick="openModal('notificationsModal')" aria-label="الإشعارات">🔔<span class="dot hidden" id="adminNotifDot">0</span></button>
         <span class="badge">👨‍💼 مدير</span>
@@ -411,6 +412,18 @@ table tr:last-child td{border-bottom:none}
         <div class="card-header"><h3>🎬 مكتبة المحتوى التعليمي</h3><button class="btn btn-primary" id="addContentBtn" onclick="openModal('addContentModal')">➕ إضافة محتوى</button></div>
         <p style="color:#b9770e;font-size:13px;margin-bottom:14px">⚠️ يظهر المحتوى تلقائياً لأي طالب دفع سعر الدورة — ارفع الملفات على موقع تخزين خارجي والصق روابطها هنا.</p>
         <div id="contentList"></div>
+      </div>
+    </div>
+
+    <!-- 2.6 أكواد الدخول -->
+    <div class="admin-section hidden" id="section-codes">
+      <div class="card">
+        <div class="card-header"><h3>🔑 أكواد الدخول</h3><button class="btn btn-gold" onclick="openGenerateCodeModal()">🔑 توليد كود</button></div>
+        <div class="filter-bar">
+          <input class="search-input" id="codesSearch" placeholder="🔍 ابحث بالكود أو اسم الطالب..." oninput="renderCodesList()">
+          <select id="codesFilter" onchange="renderCodesList()" style="padding:10px;border:2px solid var(--line);border-radius:10px"><option value="all">الكل</option><option value="available">⏳ متاحة</option><option value="used">✅ مستخدمة</option></select>
+        </div>
+        <div id="codesList"></div>
       </div>
     </div>
 
@@ -749,7 +762,7 @@ table tr:last-child td{border-bottom:none}
 
   <main class="main-content">
     <div class="topbar">
-      <h2 id="studentSectionTitle">🏠 الرئيسية</h2>
+      <div style="display:flex;align-items:center;gap:10px"><button class="sidebar-toggle" onclick="document.getElementById('studentSidebar').classList.toggle('collapsed')">☰</button><h2 id="studentSectionTitle">🏠 الرئيسية</h2></div>
       <div class="user-info">
         <button class="bell-btn" onclick="openModal('notificationsModal')" aria-label="الإشعارات">🔔<span class="dot hidden" id="studentNotifDot">0</span></button>
         <span class="badge">👨‍🎓 طالب</span>
@@ -1493,6 +1506,7 @@ function createCourseCode(courseId, studentName, expiry){
   saveDB();
   audit('توليد كود', (studentName || 'بدون اسم') + ' — دورة ' + (courseNameById(courseId) || courseId));
   cloudPushOne('codes', rec); // مزامنة فورية للشيت ليُقبل من أي جهاز
+  try { renderCodesList(); } catch(e){}
   return code;
 }
 function courseNameById(id){ const c = DB.courses.find(x => x.id === id); return c ? c.name : null; }
@@ -1668,6 +1682,8 @@ function enterAdmin(){
   if(DB.settings.teacherPhoto) av.innerHTML = '<img src="' + esc(DB.settings.teacherPhoto) + '" alt="صورة المدرس">';
   el('adminNameDisplay').textContent = DB.settings.centerName || 'مستر علاء الحفني';
   showAdminSection(adminSectionState);
+  // سحب أي حجوزات/إيصالات/طلاب جدد من الشيت في الخلفية
+  try { cloudPullNew(true).then(ch => { if(ch) renderAdminSection(adminSectionState); }); } catch(e){}
 }
 async function enterStudent(){
   el('loginScreen').style.display = 'none';
@@ -1680,7 +1696,7 @@ async function enterStudent(){
 }
 
 /* ================= التنقل — المدير ================= */
-const ADMIN_TITLES = { dashboard:'📊 لوحة التحكم', courses:'📚 الدورات', students:'👨‍🎓 الطلاب', attendance:'✅ الحضور والغياب', exams:'📝 الامتحانات', homework:'📋 الواجبات', forum:'💬 المنتدى', wallet:'💰 الخزينة والمحفظة', subscriptions:'👑 الاشتراكات', store:'🛒 المتجر والطلبات', booking:'📅 الحجوزات', receipts:'📄 الإيصالات', analytics:'📈 التحليلات والتقارير', grades:'🎓 سجل الدرجات', questionBank:'💡 بنك الأسئلة', leaderboard:'🏆 لوحة الصدارة', certificates:'🏅 الشهادات', schedule:'🗓️ الجدول الأسبوعي', announcements:'📢 الإعلانات', tasks:'✅ مهامي اليومية', settings:'⚙️ الإعدادات' };
+const ADMIN_TITLES = { dashboard:'📊 لوحة التحكم', courses:'📚 الدورات', codes:'🔑 الأكواد', students:'👨‍🎓 الطلاب', attendance:'✅ الحضور والغياب', exams:'📝 الامتحانات', homework:'📋 الواجبات', forum:'💬 المنتدى', wallet:'💰 الخزينة والمحفظة', subscriptions:'👑 الاشتراكات', store:'🛒 المتجر والطلبات', booking:'📅 الحجوزات', receipts:'📄 الإيصالات', analytics:'📈 التحليلات والتقارير', grades:'🎓 سجل الدرجات', questionBank:'💡 بنك الأسئلة', leaderboard:'🏆 لوحة الصدارة', certificates:'🏅 الشهادات', schedule:'🗓️ الجدول الأسبوعي', announcements:'📢 الإعلانات', tasks:'✅ مهامي اليومية', settings:'⚙️ الإعدادات' };
 function showAdminSection(section, menuEl){
   adminSectionState = section;
   document.querySelectorAll('.admin-section').forEach(s => s.classList.add('hidden'));
@@ -1690,6 +1706,7 @@ function showAdminSection(section, menuEl){
   if(menuEl) menuEl.classList.add('active');
   el('sectionTitle').textContent = ADMIN_TITLES[section] || '';
   renderAdminSection(section);
+  try { if(window.innerWidth && window.innerWidth <= 900){ const sb = el('adminSidebar'); if(sb) sb.classList.add('collapsed'); } } catch(e){}
   updateNotifDot();
 }
 function renderAdminSection(section){
@@ -1697,11 +1714,15 @@ function renderAdminSection(section){
     subscriptions: renderSubscriptions, store: renderStore, content: renderContentList,
     receipts: renderReceiptsList, exams: renderExamsList, homework: renderHomeworkList,
     forum: renderForumList, questionBank: renderQuestionBankList, booking: renderBookingList,
-    schedule: renderSchedule, wallet: renderTreasury, settings: renderSettings,
+    schedule: renderSchedule, wallet: renderTreasury, settings: renderSettings, codes: renderCodesList,
     certificates: () => { renderCertificates(); renderCertificatesList(); },
     analytics: renderAnalytics, grades: renderGradesTable, leaderboard: renderLeaderboard,
     announcements: renderAnnouncements, attendance: renderAttendancePage, tasks: renderTasks
   })[section]?.();
+  // الأقسام الحية تُحدَّث من الشيت تلقائياً (مخنوقة كل 30 ثانية)
+  if(['receipts', 'booking', 'students', 'codes', 'store'].includes(section)){
+    try { cloudPullNew(true).then(ch => { if(ch) renderAdminSection(section); }); } catch(e){}
+  }
 }
 
 /* ================= لوحة تحكم المدير ================= */
@@ -1888,7 +1909,7 @@ function viewStudent(id){
         <strong>${esc(c.icon || '')} ${esc(c.name)}</strong>
         <span class="tag ${isPaid ? 'tag-green' : 'tag-gray'}">${isPaid ? '✅ مفعّلة' : '🔒 غير مفعّلة'}</span>
       </div>
-      <button class="btn btn-gold btn-sm" style="margin-bottom:8px" onclick="generateCodeForStudent(${c.id})">🔑 توليد كود جديد</button>
+      <button class="btn btn-gold btn-sm" style="margin-bottom:8px" onclick="generateCodeForStudent('${c.id}')">🔑 توليد كود جديد</button>
       <div>${codesHTML}</div>
     </div>`;
   }).join('') || '<p style="color:#888">لا توجد دورات لصف هذا الطالب</p>';
@@ -1986,8 +2007,8 @@ function renderCoursesList(){
       <div class="course-info"><h4>${esc(c.name)}</h4><p>الصفوف: ${esc(c.grades.join('، '))} | القسم: ${esc(c.section)} | 🎬 ${contentCount} محتوى | 👨‍🎓 ${studentsCount} مشترك</p></div>
       <div class="course-price">${fmtMoney(c.price)}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn btn-gold btn-sm" onclick="openGenerateKeyForContent(${c.id})">🔑 أكواد</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteCourse(${c.id})">🗑️</button>
+        <button class="btn btn-gold btn-sm" onclick="openGenerateKeyForContent('${c.id}')">🔑 أكواد</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCourse('${c.id}')">🗑️</button>
       </div>
     </div>`;
   }).join('');
@@ -2017,10 +2038,11 @@ function addCourse(ev){
   else finish('');
 }
 function deleteCourse(id){
-  const course = DB.courses.find(c => c.id === id); if(!course) return;
-  const contentsCount = DB.contents.filter(c => c.courseId === id).length;
-  const codesCount = DB.codes.filter(c => c.courseId === id).length;
-  const studentsWithAccess = DB.students.filter(s => s.paidCourses.includes(id)).length;
+  id = String(id);
+  const course = DB.courses.find(c => String(c.id) === id); if(!course) return;
+  const contentsCount = DB.contents.filter(c => String(c.courseId) === id).length;
+  const codesCount = DB.codes.filter(c => String(c.courseId) === id).length;
+  const studentsWithAccess = DB.students.filter(s => (s.paidCourses || []).map(String).includes(id)).length;
   let warning = 'حذف دورة "' + course.name + '"؟';
   if(contentsCount || codesCount || studentsWithAccess){
     warning += '\n\n⚠️ سيتم أيضاً:\n';
@@ -2030,10 +2052,10 @@ function deleteCourse(id){
     warning += '\nالإيصالات القديمة تبقى في السجل كأرشيف وتظهر "دورة محذوفة".';
   }
   if(!confirm(warning)) return;
-  DB.courses = DB.courses.filter(c => c.id !== id);
-  DB.contents = DB.contents.filter(c => c.courseId !== id);
-  DB.codes = DB.codes.filter(c => c.courseId !== id);
-  DB.students.forEach(s => { s.paidCourses = s.paidCourses.filter(cid => cid !== id); });
+  DB.courses = DB.courses.filter(c => String(c.id) !== id);
+  DB.contents = DB.contents.filter(c => String(c.courseId) !== id);
+  DB.codes = DB.codes.filter(c => String(c.courseId) !== id);
+  DB.students.forEach(s => { s.paidCourses = (s.paidCourses || []).filter(cid => String(cid) !== id); });
   saveDB(); audit('حذف دورة', course.name);
   renderCoursesList();
   showToast('تم حذف الدورة وكل ما يتعلق بها');
@@ -2055,7 +2077,7 @@ function renderContentList(){
     return `<div class="course-card static">
       <div class="course-icon">${typeIcon}</div>
       <div class="course-info"><h4>${esc(c.title)}</h4><p>${course ? esc(course.name) : 'دورة محذوفة'}</p>${course ? `<p style="color:#888;font-size:12px">🔑 ${codes.length} كود (${used} مُستخدم)</p>` : ''}</div>
-      ${course ? `<button class="btn btn-gold btn-sm" onclick="openGenerateKeyForContent(${c.courseId})">🔑 أكواد الدورة</button>` : ''}
+      ${course ? `<button class="btn btn-gold btn-sm" onclick="openGenerateKeyForContent('${c.courseId}')">🔑 أكواد الدورة</button>` : ''}
       <button class="btn btn-danger btn-sm" onclick="deleteContent('${c.id}')">🗑️</button>
     </div>`;
   }).join('');
@@ -2131,7 +2153,48 @@ function openGenerateCodeModal(){
 }
 function copyCode(){
   const code = el('generatedCode').textContent;
-  navigator.clipboard.writeText(code).then(() => showToast('تم نسخ الكود'), () => showToast('انسخ الكود يدوياً: ' + code, 'warn', 5000));
+  copyCodeText(code);
+}
+function copyCodeText(code){
+  if(!code) return;
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(code).then(() => showToast('تم نسخ الكود'), () => showToast('انسخ الكود يدوياً: ' + code, 'warn', 5000));
+  } else showToast('انسخ الكود يدوياً: ' + code, 'warn', 5000);
+}
+/* ---------- إدارة الأكواد — قسم المدير ---------- */
+function renderCodesList(){
+  const list = el('codesList'); if(!list) return;
+  const badge = el('menuCodesCount');
+  if(badge) badge.textContent = DB.codes.filter(c => !c.used).length;
+  const q = ((el('codesSearch') && el('codesSearch').value) || '').trim();
+  const f = (el('codesFilter') && el('codesFilter').value) || 'all';
+  let codes = [...DB.codes].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  if(f === 'available') codes = codes.filter(c => !c.used);
+  if(f === 'used') codes = codes.filter(c => c.used);
+  if(q) codes = codes.filter(c => (c.code || '').toUpperCase().includes(q.toUpperCase()) || (c.studentName || '').includes(q));
+  if(!codes.length){ list.innerHTML = '<div class="empty-state"><div class="icon">🔑</div><p>لا توجد أكواد مطابقة — ولّد كوداً جديداً بالأعلى</p></div>'; return; }
+  list.innerHTML = codes.map(cd => {
+    const course = DB.courses.find(x => String(x.id) === String(cd.courseId));
+    const user = cd.usedByStudentId ? studentById(cd.usedByStudentId) : null;
+    return `<div class="course-card static">
+      <div class="course-icon">🔑</div>
+      <div class="course-info"><h4 style="font-family:Consolas,monospace;direction:ltr;text-align:right">${esc(cd.code)}</h4>
+      <p>📚 ${esc(course ? course.name : 'دورة محذوفة')} | 👤 ${esc(cd.studentName || user?.name || 'بدون اسم')}${cd.expiry ? ' | ⏳ صالح حتى ' + esc(cd.expiry) : ''}</p></div>
+      ${cd.used ? '<span class="tag tag-green">✅ مستخدم</span>' : '<span class="tag tag-orange">⏳ متاح</span>'}
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-info btn-sm" onclick="copyCodeText('${esc(cd.code)}')">📋 نسخ</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCode('${esc(cd.code)}')">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function deleteCode(code){
+  const cd = DB.codes.find(c => String(c.code) === String(code));
+  if(!cd) return;
+  if(!confirm('حذف الكود ' + code + '؟')) return;
+  DB.codes = DB.codes.filter(c => String(c.code) !== String(code));
+  saveDB(); renderCodesList();
+  showToast('تم حذف الكود');
 }
 /* ================= الحضور والغياب ================= */
 function renderAttendancePage(){
@@ -2788,7 +2851,7 @@ function renderStore(){
     <h4>${esc(item.name)}</h4>
     <div class="price">${fmtMoney(item.price)}</div>
     <p style="font-size:12.5px;color:#888;margin-bottom:10px">${item.stock > 0 ? 'المخزون: ' + item.stock : '<span style="color:var(--danger)">نفدت الكمية</span>'}</p>
-    <button class="btn btn-danger btn-sm" onclick="deleteStoreItem(${item.id})">🗑️ حذف</button>
+    <button class="btn btn-danger btn-sm" onclick="deleteStoreItem('${item.id}')">🗑️ حذف</button>
   </div>`).join('');
   renderOrders();
 }
@@ -2801,7 +2864,7 @@ function renderOrders(){
       const st = studentById(o.studentId);
       const items = (o.items || []).map(i => esc(i.name) + ' ×' + i.qty).join('، ');
       let action = '';
-      if(o.status === 'pending') action = `<button class="btn btn-success btn-sm" onclick="confirmOrder(${o.id})">✅ تأكيد الدفع</button> <button class="btn btn-danger btn-sm" onclick="cancelOrder(${o.id})">❌ إلغاء</button>`;
+      if(o.status === 'pending') action = `<button class="btn btn-success btn-sm" onclick="confirmOrder('${o.id}')">✅ تأكيد الدفع</button> <button class="btn btn-danger btn-sm" onclick="cancelOrder('${o.id}')">❌ إلغاء</button>`;
       return `<tr><td>${fmtDateTime(o.createdAt)}</td><td>${esc(st ? st.name : 'طالب محذوف')}</td><td>${items}</td><td><b>${fmtMoney(o.total)}</b></td>
       <td><span class="tag ${o.status === 'confirmed' ? 'tag-green' : o.status === 'cancelled' ? 'tag-red' : 'tag-orange'}">${o.status === 'confirmed' ? '✅ مؤكد' : o.status === 'cancelled' ? '❌ ملغي' : '⏳ بانتظار الدفع'}</span></td><td>${action}</td></tr>`;
     }).join('') + '</tbody></table></div>';
@@ -2816,12 +2879,12 @@ function addStoreItem(ev){
 }
 function deleteStoreItem(id){
   if(!confirm('حذف هذا المنتج من المتجر؟')) return;
-  DB.store = DB.store.filter(i => i.id !== id);
+  DB.store = DB.store.filter(i => String(i.id) !== String(id));
   saveDB(); renderStore();
   showToast('تم حذف المنتج');
 }
 function confirmOrder(orderId){
-  const o = DB.orders.find(x => x.id === orderId); if(!o || o.status !== 'pending') return;
+  const o = DB.orders.find(x => String(x.id) === String(orderId)); if(!o || o.status !== 'pending') return;
   // خصم المخزون وقبول الدفع في الخزينة — عملية واحدة
   for(const item of o.items){
     const prod = DB.store.find(p => p.id === item.id);
@@ -2837,7 +2900,7 @@ function confirmOrder(orderId){
   showToast('✅ تم تأكيد الطلب وتسجيل البيع');
 }
 function cancelOrder(orderId){
-  const o = DB.orders.find(x => x.id === orderId); if(!o || o.status !== 'pending') return;
+  const o = DB.orders.find(x => String(x.id) === String(orderId)); if(!o || o.status !== 'pending') return;
   if(!confirm('إلغاء هذا الطلب؟')) return;
   o.status = 'cancelled';
   saveDB();
@@ -2865,9 +2928,9 @@ function renderBookingList(){
       <p>${esc(course ? course.name : b.courseName || 'عام')} | ${fmtDateTime(b.date)}${b.phone ? ' | <span style="direction:ltr;display:inline-block">' + esc(b.phone) + '</span>' : ''}</p>
       ${b.zoomLink ? `<p><a href="${esc(b.zoomLink)}" target="_blank" style="color:var(--info);font-size:12.5px">🔗 رابط الجلسة</a></p>` : (DB.settings.zoomLink && b.status === 'confirmed' ? `<p><a href="${esc(DB.settings.zoomLink)}" target="_blank" style="color:var(--info);font-size:12.5px">🔗 رابط Zoom العام</a></p>` : '')}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${b.status === 'pending' ? `<button class="btn btn-success btn-sm" onclick="confirmBooking(${b.id})">✅ تأكيد</button>` : ''}
-        ${b.status !== 'cancelled' ? `<button class="btn btn-danger btn-sm" onclick="cancelBooking(${b.id})">❌ إلغاء</button>` : ''}
-        <button class="btn btn-light btn-sm" onclick="deleteBooking(${b.id})">🗑️</button>
+        ${b.status === 'pending' ? `<button class="btn btn-success btn-sm" onclick="confirmBooking('${b.id}')">✅ تأكيد</button>` : ''}
+        ${b.status !== 'cancelled' ? `<button class="btn btn-danger btn-sm" onclick="cancelBooking('${b.id}')">❌ إلغاء</button>` : ''}
+        <button class="btn btn-light btn-sm" onclick="deleteBooking('${b.id}')">🗑️</button>
       </div>
     </div>`;
   }).join('');
@@ -2885,20 +2948,22 @@ function addBooking(ev){
   showToast('✅ تم إضافة الحجز');
 }
 function confirmBooking(id){
-  const b = DB.bookings.find(x => x.id === id); if(!b) return;
+  const b = DB.bookings.find(x => String(x.id) === String(id)); if(!b) return;
   const conflict = bookingConflict(b.courseId, b.date, id);
   if(conflict){ showToast('❌ تعارض مع حجز آخر في نفس التوقيت', 'error'); return; }
   b.status = 'confirmed';
   saveDB();
+  try { cloudPushOne('bookings', b); } catch(e){}
   if(b.studentId) notifyStudent(b.studentId, 'تم تأكيد حجزك بتاريخ ' + fmtDateTime(b.date));
   renderBookingList();
   showToast('تم تأكيد الحجز');
 }
 function cancelBooking(id){
-  const b = DB.bookings.find(x => x.id === id); if(!b) return;
+  const b = DB.bookings.find(x => String(x.id) === String(id)); if(!b) return;
   if(!confirm('إلغاء حجز "' + b.studentName + '"؟')) return;
   b.status = 'cancelled';
   saveDB();
+  try { cloudPushOne('bookings', b); } catch(e){}
   if(b.studentId) notifyStudent(b.studentId, 'تم إلغاء حجزك بتاريخ ' + fmtDateTime(b.date) + ' — تواصل مع الإدارة لإعادة الجدولة');
   audit('إلغاء حجز', b.studentName);
   renderBookingList();
@@ -2906,7 +2971,7 @@ function cancelBooking(id){
 }
 function deleteBooking(id){
   if(!confirm('حذف هذا الحجز من السجل نهائياً؟')) return;
-  DB.bookings = DB.bookings.filter(b => b.id !== id);
+  DB.bookings = DB.bookings.filter(b => String(b.id) !== String(id));
   saveDB(); renderBookingList();
   showToast('تم حذف الحجز');
 }
@@ -2936,11 +3001,11 @@ function renderReceiptsList(){
       else if(r.status === 'rejected') statusHTML = '<span class="tag tag-red">❌ مرفوض</span>';
       else {
         statusHTML = '<span class="tag tag-orange">⏳ قيد المراجعة</span>';
-        actionHTML = `<button class="btn btn-success btn-sm" onclick="approveReceipt(${r.id})">✅ اعتماد</button> <button class="btn btn-danger btn-sm" onclick="rejectReceipt(${r.id})">❌ رفض</button>`;
+        actionHTML = `<button class="btn btn-success btn-sm" onclick="approveReceipt('${r.id}')">✅ اعتماد</button> <button class="btn btn-danger btn-sm" onclick="rejectReceipt('${r.id}')">❌ رفض</button>`;
       }
-      actionHTML += ` <button class="btn btn-primary btn-sm" onclick="printReceipt(${r.id})">🖨️ طباعة</button>`;
-      actionHTML += ` <button class="btn btn-light btn-sm" onclick="deleteReceipt(${r.id})">🗑️</button>`;
-      if(r.image) actionHTML += ` <button class="btn btn-info btn-sm" onclick="viewReceiptImage(${r.id})">🖼️</button>`;
+      actionHTML += ` <button class="btn btn-primary btn-sm" onclick="printReceipt('${r.id}')">🖨️ طباعة</button>`;
+      actionHTML += ` <button class="btn btn-light btn-sm" onclick="deleteReceipt('${r.id}')">🗑️</button>`;
+      if(r.image) actionHTML += ` <button class="btn btn-info btn-sm" onclick="viewReceiptImage('${r.id}')">🖼️</button>`;
       return `<tr><td>${fmtDateTime(r.date)}</td><td>${esc(student ? student.name : 'طالب محذوف')}</td><td>${label}</td><td><b>${fmtMoney(r.amount)}</b></td><td>${esc(r.method)}</td><td>${statusHTML}</td><td style="white-space:nowrap">${actionHTML}</td></tr>`;
     }).join('') + '</tbody></table></div>';
 }
@@ -2965,6 +3030,8 @@ function uploadReceiptAdmin(ev){
   applyReceiptActivation(receipt, student);
   applyTransaction('📄 إيصال طالب', amount, student.name + ' — ' + (receipt.type === 'subscription' ? 'باقة ' + receipt.subscriptionName : receipt.courseName));
   saveDB(); audit('إيصال يدوي معتمد', student.name + ' — ' + fmtMoney(amount));
+  try { cloudPushOne('receipts', receipt); } catch(e){}
+  try { cloudPushOne('students', student); } catch(e){}
   closeModal('uploadReceiptModal'); ev.target.reset();
   renderReceiptsList(); updateNotifDot();
   showToast('تم حفظ الإيصال وتفعيل ' + (receipt.type === 'subscription' ? 'الاشتراك' : 'الدورة') + ' للطالب');
@@ -2981,7 +3048,7 @@ function applyReceiptActivation(receipt, student){
   }
 }
 function approveReceipt(id){
-  const receipt = DB.receipts.find(r => r.id === id);
+  const receipt = DB.receipts.find(r => String(r.id) === String(id));
   if(!receipt || receipt.status !== 'pending') return;
   const student = studentById(receipt.studentId);
   if(!student){ showToast('الطالب غير موجود', 'error'); return; }
@@ -2990,17 +3057,21 @@ function approveReceipt(id){
   if(receipt.type !== 'subscription' && receipt.courseId != null) receipt.courseName = courseNameById(receipt.courseId) || receipt.courseName;
   applyTransaction('📄 إيصال طالب', receipt.amount, student.name + ' — ' + (receipt.type === 'subscription' ? 'باقة ' + receipt.subscriptionName : receipt.courseName));
   saveDB();
+  // دفع التفعيل للشيت ليصل لجهاز الطالب فوراً
+  try { cloudPushOne('receipts', receipt); } catch(e){}
+  try { cloudPushOne('students', student); } catch(e){}
   notifyStudent(student.id, 'تم اعتماد إيصالك بقيمة ' + fmtMoney(receipt.amount) + ' — تم تفعيل ' + (receipt.type === 'subscription' ? 'باقتك' : 'دورتك') + ' 🎉');
   audit('اعتماد إيصال', student.name + ' — ' + fmtMoney(receipt.amount));
   renderReceiptsList(); updateNotifDot();
   showToast('✅ تم اعتماد الإيصال وتفعيل ' + (receipt.type === 'subscription' ? 'الاشتراك' : 'الدورة'));
 }
 function rejectReceipt(id){
-  const receipt = DB.receipts.find(r => r.id === id);
+  const receipt = DB.receipts.find(r => String(r.id) === String(id));
   if(!receipt || receipt.status !== 'pending') return;
   if(!confirm('رفض هذا الإيصال؟ سيظهر للطالب أنه مرفوض.')) return;
   receipt.status = 'rejected';
   saveDB();
+  try { cloudPushOne('receipts', receipt); } catch(e){}
   const student = studentById(receipt.studentId);
   if(student) notifyStudent(student.id, 'تم رفض إيصالك بقيمة ' + fmtMoney(receipt.amount) + ' — تواصل مع الإدارة للتفاصيل');
   audit('رفض إيصال', fmtMoney(receipt.amount));
@@ -3009,18 +3080,18 @@ function rejectReceipt(id){
 }
 function deleteReceipt(id){
   if(!confirm('حذف هذا الإيصال من السجل؟ (لن يلغي تفعيل الدورة إن كانت مفعّلة)')) return;
-  DB.receipts = DB.receipts.filter(r => r.id !== id);
+  DB.receipts = DB.receipts.filter(r => String(r.id) !== String(id));
   saveDB(); renderReceiptsList(); updateNotifDot();
   showToast('تم حذف الإيصال من السجل');
 }
 function viewReceiptImage(id){
-  const r = DB.receipts.find(x => x.id === id);
+  const r = DB.receipts.find(x => String(x.id) === String(id));
   if(!r || !r.image) return;
   el('gradeHomeworkBody').innerHTML = `<div style="text-align:center"><img src="${r.image}" style="max-width:100%;border-radius:10px"><p style="margin-top:10px">${fmtMoney(r.amount)} — ${fmtDateTime(r.date)}</p></div>`;
   openModal('gradeHomeworkModal');
 }
 function printReceipt(id){
-  const r = DB.receipts.find(x => x.id === id); if(!r) return;
+  const r = DB.receipts.find(x => String(x.id) === String(id)); if(!r) return;
   const student = studentById(r.studentId);
   const label = r.type === 'subscription' ? 'باقة ' + (r.subscriptionName || '-') : (courseNameById(r.courseId) || r.courseName || '-');
   el('receiptPrintArea').innerHTML = `<div style="border:6px double var(--gold);border-radius:10px;padding:30px;background:var(--gold-soft);max-width:520px;margin:0 auto;font-family:Tajawal,sans-serif">
@@ -3231,7 +3302,7 @@ function renderSchedule(){
       html += `<div class="schedule-day"><strong style="font-size:15px">${day}</strong><br>` +
         items.map(s => {
           const course = DB.courses.find(c => c.id === s.courseId);
-          return `<div class="sch-item"><span>🕐 ${esc(s.time)} (${esc(String(s.duration || 60))} د)</span><span>${esc(course ? course.name : 'دورة محذوفة')}</span><button class="btn btn-danger btn-sm" onclick="deleteSchedule(${s.id})">🗑️</button></div>`;
+          return `<div class="sch-item"><span>🕐 ${esc(s.time)} (${esc(String(s.duration || 60))} د)</span><span>${esc(course ? course.name : 'دورة محذوفة')}</span><button class="btn btn-danger btn-sm" onclick="deleteSchedule('${s.id}')">🗑️</button></div>`;
         }).join('') + '</div>';
     }
   });
@@ -3253,7 +3324,7 @@ function addSchedule(ev){
 }
 function deleteSchedule(id){
   if(!confirm('حذف هذه الحصة من الجدول؟')) return;
-  DB.schedule = DB.schedule.filter(s => s.id !== id);
+  DB.schedule = DB.schedule.filter(s => String(s.id) !== String(id));
   saveDB(); renderSchedule();
   showToast('تم حذف الحصة');
 }
@@ -3433,6 +3504,11 @@ function showStudentSection(section, menuEl){
     subscriptions: renderStudentSubscriptions, store: renderStudentStore, questionBank: renderStudentQuestionBank,
     uploadReceipt: renderStudentReceiptForm, bookings: renderStudentBookings, certificates: renderStudentCertificates
   })[section]?.();
+  // تجديد بيانات الطالب من الشيت (تفعيل المدير يظهر تلقائياً)
+  if(currentUser && currentUser.type === 'student' && ['home', 'uploadReceipt', 'bookings', 'myCourses'].includes(section)){
+    try { cloudRefreshMe(); } catch(e){}
+  }
+  try { if(window.innerWidth && window.innerWidth <= 900 && section !== 'contentViewer' && section !== 'examRunner'){ const sb = el('studentSidebar'); if(sb) sb.classList.add('collapsed'); } } catch(e){}
   updateNotifDot();
 }
 function renderStudentDashboard(){
@@ -3540,8 +3616,10 @@ function renderMyCourses(){
   }).join('');
 }
 function openCourseForStudent(courseId){
-  currentCourseForBarcode = courseId;
   const s = currentUser.data;
+  // الدورة مفعّلة already — ادخل مباشرة بدون باركود
+  if(canAccessContent(s, courseId)){ showCourseContent(courseId); return; }
+  currentCourseForBarcode = courseId;
   el('barcodeHint').textContent = 'الباركود الخاص بصفك (' + s.grade + '): ' + (s.barcode || '-');
   el('barcodeInput').value = '';
   openModal('barcodeModal');
@@ -3836,7 +3914,7 @@ function renderStudentStore(){
     <h4>${esc(item.name)}</h4>
     <div class="price">${fmtMoney(item.price)}</div>
     <p style="font-size:12.5px;color:#888;margin-bottom:10px">${item.stock > 0 ? 'متاح' : 'نفدت الكمية'}</p>
-    <button class="btn btn-primary btn-sm" ${item.stock <= 0 ? 'disabled' : ''} onclick="buyItem(${item.id})">🛒 اطلب الآن</button>
+    <button class="btn btn-primary btn-sm" ${item.stock <= 0 ? 'disabled' : ''} onclick="buyItem('${item.id}')">🛒 اطلب الآن</button>
   </div>`).join('') : '<div class="empty-state" style="grid-column:1/-1"><div class="icon">🛒</div><p>لا توجد منتجات</p></div>';
   const myOrders = DB.orders.filter(o => String(o.studentId) === String(s.id)).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
   el('studentOrdersList').innerHTML = myOrders.length ? '<div class="table-wrap"><table><thead><tr><th>التاريخ</th><th>المنتجات</th><th>الإجمالي</th><th>الحالة</th></tr></thead><tbody>' +
@@ -3845,11 +3923,12 @@ function renderStudentStore(){
 }
 function buyItem(itemId){
   const s = currentUser.data;
-  const item = DB.store.find(i => i.id === itemId);
+  const item = DB.store.find(i => String(i.id) === String(itemId));
   if(!item || item.stock <= 0){ showToast('المنتج غير متاح', 'error'); return; }
   if(!confirm('تأكيد طلب "' + item.name + '" بسعر ' + fmtMoney(item.price) + '؟\nادفع للإدارة ثم سيتم تأكيد طلبك.')) return;
   DB.orders.push({ id: uid(), studentId: s.id, items: [{ id: item.id, name: item.name, price: item.price, qty: 1 }], total: item.price, status: 'pending', createdAt: nowISO() });
   saveDB();
+  try { cloudCall({ action: 'order', order: JSON.stringify(DB.orders[DB.orders.length - 1]) }, 15000).catch(() => {}); } catch(e){}
   renderStudentStore(); updateNotifDot();
   showToast('✅ تم إرسال طلبك — ادفع قيمته للإدارة ليتم التأكيد');
 }
@@ -3865,7 +3944,7 @@ function renderStudentBookings(){
       <div class="course-info"><h4>${esc(course ? course.name : 'حصة عامة')} <span class="tag ${b.status === 'confirmed' ? 'tag-green' : b.status === 'cancelled' ? 'tag-red' : 'tag-orange'}">${b.status === 'confirmed' ? '✅ مؤكد' : b.status === 'cancelled' ? '❌ ملغي' : '⏳ قيد الانتظار'}</span></h4>
       <p>${fmtDateTime(b.date)}</p>
       ${b.zoomLink ? `<p><a href="${esc(b.zoomLink)}" target="_blank" style="color:var(--info);font-size:12.5px">🔗 رابط الجلسة</a></p>` : (DB.settings.zoomLink && b.status === 'confirmed' ? `<p><a href="${esc(DB.settings.zoomLink)}" target="_blank" style="color:var(--info);font-size:12.5px">🔗 رابط Zoom</a></p>` : '')}</div>
-      ${b.status === 'pending' ? `<button class="btn btn-danger btn-sm" onclick="studentCancelBooking(${b.id})">❌ إلغاء الطلب</button>` : ''}
+      ${b.status === 'pending' ? `<button class="btn btn-danger btn-sm" onclick="studentCancelBooking('${b.id}')">❌ إلغاء الطلب</button>` : ''}
     </div>`;
   }).join('') : '<div class="empty-state"><div class="icon">📅</div><p>لا توجد حجوزات — احجز حصتك الأولى</p></div>';
 }
@@ -3879,15 +3958,18 @@ function studentAddBooking(ev){
   if(conflict){ showToast('❌ هذا التوقيت محجوز — اختر وقتاً آخر', 'error'); return; }
   DB.bookings.push({ id: uid(), studentId: s.id, studentName: s.name, phone: s.phone, courseId, courseName: courseNameById(courseId) || 'حصة عامة', date, zoomLink: '', note: '', status: 'pending', createdAt: nowISO() });
   saveDB();
+  // إرسال مباشر للشيت المركزي (بدون سر) ليظهر عند المدير فوراً
+  try { cloudCall({ action: 'booking', id: DB.bookings[DB.bookings.length - 1].id, studentId: s.id, studentName: s.name, phone: s.phone, courseId: courseId || '', courseName: courseNameById(courseId) || 'حصة عامة', date, status: 'pending', createdAt: DB.bookings[DB.bookings.length - 1].createdAt }, 15000).catch(() => {}); } catch(e){}
   el('studentBookingDate').value = '';
   renderStudentBookings(); updateNotifDot();
   showToast('📅 تم إرسال طلب الحجز — سيصلك إشعار عند التأكيد');
 }
 function studentCancelBooking(id){
-  const b = DB.bookings.find(x => x.id === id); if(!b) return;
+  const b = DB.bookings.find(x => String(x.id) === String(id)); if(!b) return;
   if(!confirm('إلغاء طلب الحجز؟')) return;
   b.status = 'cancelled';
   saveDB(); renderStudentBookings();
+  try { cloudCall({ action: 'booking', id: b.id, studentId: b.studentId || '', studentName: b.studentName || '', phone: b.phone || '', courseId: b.courseId || '', courseName: b.courseName || 'حصة عامة', date: b.date || '', status: 'cancelled', createdAt: b.createdAt || '' }, 15000).catch(() => {}); } catch(e){}
   showToast('تم إلغاء طلب الحجز');
 }
 /* ---------- الشهادات — جانب الطالب ---------- */
@@ -3994,7 +4076,7 @@ document.addEventListener('dragstart', e => { if(e.target.closest('.protected-co
    - التسجيل/التفعيل/الإيصالات/النتائج تُرسل للشيت ثم تُحفظ محلياً
    - عند غياب الرابط أو انقطاع النت: fallback محلي كامل
    ================================================================ */
-const DEFAULT_CLOUD_URL = 'https://script.google.com/macros/s/AKfycbzsFrGrhRj-jWN9wnD_NEtWRZ5H4CvHxMQytYpe_NPLU10f6WTbvvDY4Z_vk1w8FnnW9Q/exec';
+const DEFAULT_CLOUD_URL = 'https://script.google.com/macros/s/AKfycbySMoMblFP9EwF72SKXDI43_y5ZiqcFhG0CyDv5kPGCIqsTFa9cb3JeKbrvFFwRqp9K/exec';
 function cloudCfg(){
   try {
     const c = JSON.parse(localStorage.getItem('cloudCfg') || '{}');
@@ -4116,6 +4198,8 @@ async function cloudPullToLocal(){
     if(d.students) DB.students = d.students;
     if(d.attempts) DB.examAttempts = d.attempts;
     if(d.receipts) DB.receipts = d.receipts;
+    if(d.bookings) DB.bookings = d.bookings;
+    if(d.orders) DB.orders = d.orders;
     if(d.announcements) DB.announcements = d.announcements;
     saveDB();
     renderAdminSection(adminSectionState);
@@ -4123,8 +4207,83 @@ async function cloudPullToLocal(){
   } catch(e){ showToast('❌ فشل السحب: ' + String(e.message || e), 'error'); }
 }
 async function cloudPushOne(sheet, row){
-  try { await cloudPushSheet(sheet, [row]); }
+  try {
+    if(row){ row.updatedAt = nowISO(); try { saveDB(); } catch(e){} }
+    await cloudPushSheet(sheet, [row]);
+  }
   catch(e){ /* يُتجاهل — تبقى محلياً وتُرفع مع الرفع الشامل */ }
+}
+/* دمج سجلات الشيت في المحلي: الجديد يُضاف، والأحدث (updatedAt) يفوز */
+function mergeById(localArr, cloudArr){
+  let changed = 0;
+  const idx = {};
+  localArr.forEach((r, i) => { idx[String(r.id)] = i; });
+  (cloudArr || []).forEach(cr => {
+    if(cr.id === undefined || cr.id === null) return;
+    const k = String(cr.id);
+    if(idx[k] === undefined){ localArr.push(JSON.parse(JSON.stringify(cr))); changed++; }
+    else {
+      const lr = localArr[idx[k]];
+      const lu = lr.updatedAt || '', cu = cr.updatedAt || '';
+      if(cu && (!lu || cu >= lu) && JSON.stringify(lr) !== JSON.stringify(cr)){
+        localArr[idx[k]] = JSON.parse(JSON.stringify(cr)); changed++;
+      }
+    }
+  });
+  return changed;
+}
+/* سحب خلفية للمدير: طلاب/إيصالات/حجوزات/طلبات/محاولات/أكواد الجديدة */
+async function cloudPullNew(silent){
+  try {
+    const c = cloudCfg();
+    if(!c.enabled || !c.url || !c.secret) return false;
+    const now = Date.now();
+    if(window._lastPullAt && now - window._lastPullAt < 30000) return false;
+    window._lastPullAt = now;
+    const r = await cloudCall({ action: 'adminPull', secret: c.secret }, 25000);
+    if(!r || !r.ok || !r.dump) throw new Error((r && r.error) || 'pull-failed');
+    const d = r.dump;
+    let changed = 0;
+    if(d.students) changed += mergeById(DB.students, d.students);
+    if(d.receipts) changed += mergeById(DB.receipts, d.receipts);
+    if(d.bookings) changed += mergeById(DB.bookings, d.bookings);
+    if(d.orders) changed += mergeById(DB.orders, d.orders);
+    if(d.attempts) changed += mergeById(DB.examAttempts, d.attempts);
+    if(d.codes) changed += mergeById(DB.codes, d.codes);
+    if(changed){ saveDB(); if(!silent) showToast('☁️ وصل ' + changed + ' تحديث جديد من الشيت'); }
+    return changed > 0;
+  } catch(e){ return false; }
+}
+/* تجديد بيانات الطالب نفسه (تفعيل/حالة إيصال) — بحد أقصى مرة كل دقيقتين */
+async function cloudRefreshMe(){
+  try {
+    if(!currentUser || currentUser.type !== 'student') return false;
+    const c = cloudCfg();
+    if(!c.enabled || !c.url) return false;
+    const now = Date.now();
+    if(window._lastMeAt && now - window._lastMeAt < 120000) return false;
+    window._lastMeAt = now;
+    const r = await cloudCall({ action: 'mydata', studentId: currentUser.data.id }, 15000);
+    if(!r || !r.ok) return false;
+    let changed = 0;
+    if(r.student){
+      const s = currentUser.data;
+      const before = JSON.stringify({ p: s.paidCourses, sub: s.subscription, st: s.status });
+      Object.assign(s, r.student);
+      const local = DB.students.find(x => String(x.id) === String(s.id));
+      if(local) Object.assign(local, r.student);
+      if(JSON.stringify({ p: s.paidCourses, sub: s.subscription, st: s.status }) !== before) changed++;
+      saveDB();
+    }
+    if(r.receipts) changed += mergeById(DB.receipts, r.receipts.filter(x => String(x.studentId) === String(currentUser.data.id)));
+    if(r.bookings) changed += mergeById(DB.bookings, r.bookings.filter(x => String(x.studentId) === String(currentUser.data.id)));
+    if(changed){
+      saveDB();
+      const sec = (typeof studentSectionState !== 'undefined') ? studentSectionState : 'home';
+      if(['home', 'uploadReceipt', 'bookings', 'myCourses'].includes(sec)) showStudentSection(sec);
+    }
+    return changed > 0;
+  } catch(e){ return false; }
 }
 
 function boot(){
@@ -4132,6 +4291,12 @@ function boot(){
   fillGradeSelect('newStudentGrade', false);
   fillGradeSelect('editStudentGrade', false);
   try { renderCloudStatus(); } catch(e){}
+  // على الموبايل: القائمة مطوية افتراضياً ليتسع المحتوى
+  try {
+    if(window.innerWidth && window.innerWidth <= 900){
+      ['adminSidebar', 'studentSidebar'].forEach(id => { const sb = el(id); if(sb) sb.classList.add('collapsed'); });
+    }
+  } catch(e){}
   // تحديث الكتالوج من الشيت في الخلفية (لا يمنع الدخول)
   try {
     const cc = cloudCfg();
