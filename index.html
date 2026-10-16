@@ -388,7 +388,7 @@ table tr:last-child td{border-bottom:none}
         <button class="btn btn-gold" onclick="openGenerateCodeModal()">🔑 توليد كود</button>
         <button class="btn btn-warning" onclick="openModal('uploadReceiptModal')">📄 رفع إيصال</button>
         <button class="btn btn-primary" onclick="openModal('addHomeworkModal')">📝 واجب جديد</button>
-        <button class="btn btn-success" onclick="openModal('addExamModal')">📝 امتحان جديد</button>
+        <button class="btn btn-success" onclick="openExamBuilder()">📝 امتحان جديد</button>
         <button class="btn btn-info" onclick="openModal('addAnnouncementModal')">📢 إعلان جديد</button>
       </div>
       <div class="card">
@@ -694,6 +694,22 @@ table tr:last-child td{border-bottom:none}
           <button class="btn btn-info" onclick="exportStudentsExcel()">📊 تصدير الطلاب CSV</button>
           <input type="file" id="importBackupFile" accept="application/json" style="display:none" onchange="handleImportBackup(event)">
         </div>
+      </div>
+      <div class="settings-section">
+        <h3 style="margin-bottom:14px">☁️ الربط السحابي (Google Sheets)</h3>
+        <p style="color:#888;margin-bottom:14px">عند تفعيله: الطالب يسجل ويُفعّل الكود من أي جهاز، والكتالوج (الدورات/المحتوى/الامتحانات) يُسحب من الشيت المركزي. بدونه تعود المنصة للتخزين المحلي فقط.</p>
+        <div class="form-group"><label>رابط الـ Web App (ينتهي بـ /exec)</label><input type="url" id="cloudUrl" placeholder="https://script.google.com/macros/s/.../exec" style="direction:ltr;text-align:left"></div>
+        <div class="form-row">
+          <div class="form-group"><label>الرمز السري (CLOUD_SECRET)</label><input type="text" id="cloudSecret" placeholder="انسخه من Log دالة setup_" style="direction:ltr;text-align:left"></div>
+          <div class="form-group"><label>الحالة</label><select id="cloudEnabled"><option value="off">⛔ معطّل (محلي فقط)</option><option value="on">✅ مفعّل (سحابي)</option></select></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          <button class="btn btn-primary" onclick="saveCloudSettings()">💾 حفظ الربط</button>
+          <button class="btn btn-light" onclick="testCloudConnection()">🔌 اختبار الاتصال</button>
+          <button class="btn btn-gold" onclick="cloudPushCatalog()">⬆️ رفع الكتالوج للشيت</button>
+          <button class="btn btn-info" onclick="cloudPullToLocal()">⬇️ سحب نسخة للجهاز</button>
+        </div>
+        <p id="cloudStatus" style="margin-top:10px;color:#888;font-size:13px"></p>
       </div>
       <div class="settings-section">
         <h3 style="margin-bottom:14px">📜 سجل العمليات (Audit Log)</h3>
@@ -1112,11 +1128,26 @@ function pad2(n){ return String(n).padStart(2, '0'); }
 
 /* ---------------- التشفير ---------------- */
 async function sha256Hex(text){
-  const data = new TextEncoder().encode(String(text));
-  const buf = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  try {
+    if(window.crypto && crypto.subtle && window.isSecureContext !== false){
+      const data = new TextEncoder().encode(String(text));
+      const buf = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+  } catch(e){ /* fallback below for http hosting */ }
+  // بديل بسيط عند غياب crypto.subtle (استضافة http غير آمنة) — ليس SHA-256 لكنه يمنع تعطل الدخول
+  let h1 = 0x811c9dc5, h2 = 0x01000193;
+  const s = String(text);
+  for(let i = 0; i < s.length; i++){ h1 = Math.imul(h1 ^ s.charCodeAt(i), 16777619) >>> 0; h2 = Math.imul(h2 + s.charCodeAt(i), 31) >>> 0; }
+  return ('0000000' + h1.toString(16)).slice(-8) + ('0000000' + h2.toString(16)).slice(-8) + '-fallback';
 }
-function randomSalt(){ return Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2,'0')).join(''); }
+function randomSalt(){
+  try {
+    return Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2,'0')).join('');
+  } catch(e){
+    return Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
+}
 
 /* ---------------- قاعدة البيانات والتخزين ---------------- */
 const DB_KEY = 'platformDB';
@@ -1439,7 +1470,12 @@ async function verifyAdminPassword(password){
 /* ---------------- الأكواد ---------------- */
 function generateSecureCode(){
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const bytes = crypto.getRandomValues(new Uint32Array(16));
+  let bytes;
+  try {
+    bytes = crypto.getRandomValues(new Uint32Array(16));
+  } catch(e){
+    bytes = Array.from({length:16}, () => Math.floor(Math.random() * 4294967296));
+  }
   const out = [];
   for(let g = 0; g < 4; g++){
     let group = '';
@@ -1452,9 +1488,11 @@ function createCourseCode(courseId, studentName, expiry){
   if(!DB.codes) DB.codes = [];
   let code;
   do { code = generateSecureCode(); } while(DB.codes.some(c => c.code === code));
-  DB.codes.push({ code, studentName: studentName || '', courseId, expiry: expiry || '', used: false, usedByStudentId: null, usedAt: null, deviceId: null, createdAt: nowISO() });
+  const rec = { id: uid(), code, studentName: studentName || '', courseId, expiry: expiry || '', used: false, usedByStudentId: null, usedAt: null, deviceId: null, createdAt: nowISO() };
+  DB.codes.push(rec);
   saveDB();
   audit('توليد كود', (studentName || 'بدون اسم') + ' — دورة ' + (courseNameById(courseId) || courseId));
+  cloudPushOne('codes', rec); // مزامنة فورية للشيت ليُقبل من أي جهاز
   return code;
 }
 function courseNameById(id){ const c = DB.courses.find(x => x.id === id); return c ? c.name : null; }
@@ -1538,7 +1576,7 @@ async function adminLogin(ev){
   showToast('مرحباً بك يا ' + (DB.settings.centerName || 'مستر علاء'));
 }
 
-function studentLogin(ev){
+async function studentLogin(ev){
   ev.preventDefault();
   const fullName = el('studentFullName').value.trim().replace(/\s+/g, ' ');
   const phone = el('studentPhone').value.trim();
@@ -1547,6 +1585,38 @@ function studentLogin(ev){
   const rl = checkRateLimit('student:' + phone, 5, 5 * 60000);
   if(!rl.ok){ showLoginError('student', 'تم إيقاف المحاولات مؤقتاً — حاول بعد ' + rl.waitMin + ' دقيقة'); return; }
   const deviceId = getDeviceId();
+  // 1) المسار السحابي أولاً (الشيت المركزي) — يعمل من أي جهاز
+  const cfg = cloudCfg();
+  if(cfg.enabled && cfg.url){
+    try {
+      showLoginError('student', '');
+      const r = await cloudCall({ action: 'register', name: fullName, phone, grade, deviceId }, 15000);
+      if(r && r.ok && r.student){
+        const cs = r.student;
+        if(cs.status === 'deleted'){ showLoginError('student', 'هذا الحساب محذوف — تواصل مع الإدارة'); return; }
+        if(cs.status === 'suspended'){ showLoginError('student', 'هذا الحساب موقوف مؤقتاً — تواصل مع الإدارة'); return; }
+        // مزامنة محلية للعرض السريع
+        let local = DB.students.find(s => String(s.id) === String(cs.id)) || DB.students.find(s => s.phone === phone && s.name === fullName);
+        if(!local){ DB.students.push(Object.assign({}, cs)); local = DB.students[DB.students.length - 1]; }
+        else Object.assign(local, cs);
+        saveDB();
+        clearFails('student:' + phone);
+        currentUser = { type: 'student', data: local };
+        createSession('student', local.id);
+        await enterStudent();
+        showToast('مرحباً ' + local.name + (r.created ? ' — تم تسجيلك مركزياً' : ''));
+        return;
+      }
+      if(r && !r.ok){
+        if(r.error === 'device-bound'){ showLoginError('student', '⛔ هذا الحساب مرتبط بجهاز آخر — تواصل مع الإدارة لنقله'); return; }
+        if(r.error === 'deleted'){ showLoginError('student', 'هذا الحساب محذوف — تواصل مع الإدارة'); return; }
+        if(r.error === 'suspended'){ showLoginError('student', 'هذا الحساب موقوف مؤقتاً — تواصل مع الإدارة'); return; }
+        if(r.error === 'phone-taken'){ showLoginError('student', '❌ هذا الهاتف مسجل باسم آخر — تحقق من الاسم'); return; }
+      }
+      // أي خطأ آخر: fallback محلي بالأسفل
+    } catch(e){ /* انقطاع/خطأ سحابي — نكمل محلياً */ }
+  }
+  // 2) المسار المحلي (احتياطي/أوفلاين)
   let student = DB.students.find(s => s.phone === phone && s.name === fullName);
   if(student && student.status === 'deleted'){ showLoginError('student', 'هذا الحساب محذوف — تواصل مع الإدارة'); return; }
   if(student && student.status === 'suspended'){ showLoginError('student', 'هذا الحساب موقوف مؤقتاً — تواصل مع الإدارة'); return; }
@@ -1574,7 +1644,7 @@ function studentLogin(ev){
   clearFails('student:' + phone);
   currentUser = { type: 'student', data: student };
   createSession('student', student.id);
-  enterStudent();
+  await enterStudent();
   showToast('مرحباً ' + student.name);
 }
 
@@ -1599,10 +1669,14 @@ function enterAdmin(){
   el('adminNameDisplay').textContent = DB.settings.centerName || 'مستر علاء الحفني';
   showAdminSection(adminSectionState);
 }
-function enterStudent(){
+async function enterStudent(){
   el('loginScreen').style.display = 'none';
   el('studentDashboard').classList.add('active');
-  showStudentSection('home');
+  const cfg = cloudCfg();
+  if(cfg.enabled && cfg.url){
+    try { await cloudRefreshCatalog(true); } catch(e){}
+  }
+  showStudentSection('home', document.querySelector('#studentDashboard .menu-item'));
 }
 
 /* ================= التنقل — المدير ================= */
@@ -1934,6 +2008,7 @@ function addCourse(ev){
     if(saveDB()){
       audit('إضافة دورة', name);
       closeModal('addCourseModal'); ev.target.reset();
+      try { cloudPushOne('courses', DB.courses[DB.courses.length - 1]); } catch(e){}
       renderCoursesList(); el('menuCoursesCount').textContent = DB.courses.length;
       showToast('✅ تم إضافة الدورة');
     }
@@ -1997,6 +2072,7 @@ function addContent(ev){
   if(saveDB()){
     audit('إضافة محتوى', title + ' — ' + (courseNameById(courseId) || courseId));
     closeModal('addContentModal'); ev.target.reset();
+    try { cloudPushOne('contents', DB.contents[DB.contents.length - 1]); } catch(e){}
     renderContentList();
     showToast('✅ تمت إضافة المحتوى — سيظهر للطلاب المشتركين في الدورة');
   }
@@ -2192,7 +2268,7 @@ function openExamBuilder(examId){
     ['newExamTitle','newExamDate','newExamStartAt','newExamEndAt'].forEach(i => el(i).value = '');
     el('newExamMaxGrade').value = 100; el('newExamDuration').value = 30;
     el('newExamMaxAttempts').value = 1; el('newExamShuffle').value = 'yes';
-    el('newExamShowAnswers').value = 'yes'; el('newExamStatus').value = 'draft';
+    el('newExamShowAnswers').value = 'yes'; el('newExamStatus').value = 'published';
   }
   if(!window._examQuestions.length) window._examQuestions.push(emptyQuestion());
   renderExamQuestionsUI();
@@ -2322,6 +2398,11 @@ function saveExam(ev){
   }
   saveDB();
   closeModal('examBuilderModal');
+  try {
+    const savedId = id || data.id;
+    const saved = (quizMode ? DB.quizzes : DB.exams).find(e => String(e.id) === String(savedId));
+    if(saved && !quizMode) cloudPushOne('exams', saved);
+  } catch(e){}
   if(quizMode){ renderQuestionBankList(); showToast('✅ تم حفظ الاختبار التفاعلي بنجاح'); }
   else { renderExamsList(); showToast('✅ تم حفظ الامتحان بنجاح'); }
 }
@@ -3282,6 +3363,7 @@ function renderSettings(){
   preview.innerHTML = DB.settings.teacherPhoto ? '<img src="' + esc(DB.settings.teacherPhoto) + '" style="width:100%;height:100%;object-fit:cover">' : 'ع';
   el('storageUsage').textContent = storageUsage();
   el('lastBackupDate').textContent = DB.lastBackupAt ? fmtDateTime(DB.lastBackupAt) : 'لم يتم بعد';
+  try { renderCloudStatus(); } catch(e){}
   renderAuditLog();
 }
 function renderAuditLog(){
@@ -3394,10 +3476,38 @@ function examVisibleToStudent(ex, s){
   if(ex.endAt && new Date(ex.endAt) < new Date()) return false;
   return true;
 }
-function redeemCode(){
+async function redeemCode(){
   const input = el('redeemCodeInput').value.trim().toUpperCase();
   if(!input){ showToast('يرجى إدخال الكود', 'error'); return; }
   const s = currentUser.data;
+  // 1) التفعيل المركزي أولاً — يفتح الدورة كاملة من أي جهاز ويمنع تكرار الاستخدام
+  const cfg = cloudCfg();
+  if(cfg.enabled && cfg.url){
+    try {
+      const r = await cloudCall({ action: 'redeem', code: input, studentId: s.id }, 15000);
+      if(r && r.ok){
+        const courseName = (r.course && r.course.name) || '';
+        if(r.student && Array.isArray(r.student.paidCourses)) s.paidCourses = r.student.paidCourses;
+        else if(r.course && !s.paidCourses.includes(r.course.id)) s.paidCourses.push(r.course.id);
+        // مزامنة حالة الكود محلياً إن وُجد
+        const lc = DB.codes.find(c => String(c.code).toUpperCase() === input);
+        if(lc){ lc.used = true; lc.usedByStudentId = s.id; lc.usedAt = nowISO(); }
+        saveDB();
+        el('redeemCodeInput').value = '';
+        audit('استرداد كود (سحابي)', s.name + ' — ' + courseName);
+        showToast('✅ تم تفعيل دورة "' + courseName + '" بنجاح — الدورة كاملة متاحة الآن');
+        renderStudentHome();
+        return;
+      }
+      if(r && !r.ok){
+        if(r.error === 'used'){ showToast('❌ هذا الكود تم استخدامه من قبل', 'error'); return; }
+        if(r.error === 'expired'){ showToast('❌ الكود منتهي الصلاحية', 'error'); return; }
+        if(r.error === 'invalid'){ showToast('❌ الكود غير صحيح', 'error'); return; }
+        if(r.error === 'no-student'){ showToast('❌ الحساب غير موجود مركزياً — سجل خروجك وادخل مجدداً', 'error'); return; }
+      }
+    } catch(e){ /* fallback محلي بالأسفل عند انقطاع النت */ }
+  }
+  // 2) المسار المحلي (أوفلاين/بدون سحابة)
   const codeObj = DB.codes.find(c => c.code === input);
   if(!codeObj){ showToast('❌ الكود غير صحيح', 'error'); return; }
   if(codeObj.used){ showToast('❌ هذا الكود تم استخدامه من قبل', 'error'); return; }
@@ -3586,6 +3696,9 @@ function submitExam(auto){
   DB.grades.push({ id: uid(), studentId: s.id, courseId: ex.examRef.courseId || null, examName: (ex.isQuiz ? 'اختبار: ' : 'امتحان: ') + ex.title, score, maxScore: ex.maxGrade, date: nowISO(), source: ex.isQuiz ? 'quiz' : 'exam' });
   sessionStorage.removeItem('examDraft_' + ex.id);
   saveDB();
+  try {
+    cloudCall({ action: 'attempt', studentId: s.id, examId: ex.id, score, maxScore: ex.maxGrade }, 15000).catch(() => {});
+  } catch(e){}
   const pct = Math.round(score / ex.maxGrade * 100);
   // عرض النتيجة والمراجعة
   let reviewHTML = '';
@@ -3846,6 +3959,9 @@ function uploadReceipt(ev){
   const finish = () => {
     DB.receipts.push(receipt);
     saveDB();
+    try {
+      cloudCall({ action: 'receipt', studentId: receipt.studentId, type: receipt.type, courseId: receipt.courseId || '', subscriptionName: receipt.subscriptionName || '', amount: receipt.amount, method: receipt.method }, 15000).catch(() => {});
+    } catch(e){}
     ev.target.reset(); toggleReceiptType(); renderMyReceiptsStatus(); updateNotifDot();
     showToast('✅ تم رفع الإيصال — في انتظار مراجعة الإدارة');
     alert('✅ تم رفع الإيصال بنجاح\n\nطلبك الآن قيد المراجعة، وسيتم تفعيل الدورة/الباقة تلقائياً فور الاعتماد، وستصلك إشعاراً بالحالة.');
@@ -3872,10 +3988,155 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('dragstart', e => { if(e.target.closest('.protected-content')) e.preventDefault(); });
 
+/* ================================================================
+   الطبقة السحابية — Google Sheets عبر Apps Script (GET فقط)
+   - الكتالوج العام يُسحب من الشيت ويُدمج محلياً للعرض
+   - التسجيل/التفعيل/الإيصالات/النتائج تُرسل للشيت ثم تُحفظ محلياً
+   - عند غياب الرابط أو انقطاع النت: fallback محلي كامل
+   ================================================================ */
+const DEFAULT_CLOUD_URL = 'https://script.google.com/macros/s/AKfycbzsFrGrhRj-jWN9wnD_NEtWRZ5H4CvHxMQytYpe_NPLU10f6WTbvvDY4Z_vk1w8FnnW9Q/exec';
+function cloudCfg(){
+  try {
+    const c = JSON.parse(localStorage.getItem('cloudCfg') || '{}');
+    const url = ((c.url || '') || DEFAULT_CLOUD_URL).trim();
+    const secret = (c.secret || '').trim();
+    // افتراضياً: مفعّل طالما يوجد رابط (حتى قبل أن يحفظ المدير أي شيء) — والتعطيل الصريح يُحترم
+    const enabled = ('enabled' in c) ? c.enabled === true : url !== '';
+    return { url, secret, enabled };
+  } catch(e){ return { url: DEFAULT_CLOUD_URL, secret: '', enabled: true }; }
+}
+function saveCloudSettings(){
+  const url = el('cloudUrl').value.trim();
+  const secret = el('cloudSecret').value.trim();
+  const enabled = el('cloudEnabled').value === 'on';
+  if(enabled && !url){ showToast('❌ الصق رابط الـ Web App أولاً', 'error'); return; }
+  try { localStorage.setItem('cloudCfg', JSON.stringify({ url, secret, enabled })); } catch(e){}
+  showToast(enabled ? '✅ تم تفعيل الربط السحابي' : '💾 تم الحفظ — الوضع المحلي');
+  renderCloudStatus();
+  if(enabled) cloudRefreshCatalog(true);
+}
+function renderCloudStatus(){
+  const c = cloudCfg();
+  const box = el('cloudStatus');
+  if(box) box.textContent = c.enabled ? '☁️ مفعّل — ' + c.url.slice(0, 60) + '…' : 'محلي فقط — فعّل الرابط للمزامنة بين الأجهزة';
+  if(el('cloudUrl') && !el('cloudUrl').value) el('cloudUrl').value = c.url || '';
+  if(el('cloudSecret') && !el('cloudSecret').value) el('cloudSecret').value = c.secret || '';
+  if(el('cloudEnabled')) el('cloudEnabled').value = c.enabled ? 'on' : 'off';
+}
+async function cloudCall(params, timeoutMs){
+  const c = cloudCfg();
+  if(!c.enabled || !c.url) throw new Error('cloud-off');
+  const qs = Object.keys(params).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(params[k] == null ? '' : String(params[k]))).join('&');
+  const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  const t = setTimeout(() => { try { ctrl && ctrl.abort(); } catch(e){} }, timeoutMs || 15000);
+  try {
+    const res = await fetch(c.url + (c.url.includes('?') ? '&' : '?') + qs, { method: 'GET', redirect: 'follow', signal: ctrl ? ctrl.signal : undefined });
+    const txt = await res.text();
+    return JSON.parse(txt);
+  } finally { clearTimeout(t); }
+}
+function cloudMergeCatalog(cat){
+  if(!cat || !cat.ok) return false;
+  try {
+    if(Array.isArray(cat.courses)){
+      const localById = {};
+      DB.courses.forEach(x => localById[String(x.id)] = x);
+      cat.courses.forEach(cc => { localById[String(cc.id)] = Object.assign({}, localById[String(cc.id)] || {}, cc); });
+      // دمج: السحابة مصدر الكتالوج + أي دورة محلية لم تُرفع بعد تبقى
+      const ids = {};
+      DB.courses = Object.values(localById);
+      cat.courses.forEach(cc => ids[String(cc.id)] = true);
+    }
+    if(Array.isArray(cat.contents)){
+      const lById = {};
+      DB.contents.forEach(x => lById[String(x.id)] = x);
+      cat.contents.forEach(cc => { lById[String(cc.id)] = Object.assign({}, lById[String(cc.id)] || {}, cc); });
+      DB.contents = Object.values(lById);
+    }
+    if(Array.isArray(cat.exams)){
+      const lById = {};
+      DB.exams.forEach(x => lById[String(x.id)] = x);
+      cat.exams.forEach(cc => { lById[String(cc.id)] = Object.assign({}, lById[String(cc.id)] || {}, cc); });
+      DB.exams = Object.values(lById);
+    }
+    if(Array.isArray(cat.announcements) && cat.announcements.length) DB.announcements = cat.announcements;
+    try { localStorage.setItem('cloudCatalog', JSON.stringify({ at: Date.now(), cat })); } catch(e){}
+    saveDB();
+    return true;
+  } catch(e){ return false; }
+}
+async function cloudRefreshCatalog(silent){
+  try {
+    const r = await cloudCall({ action: 'catalog' }, 15000);
+    if(cloudMergeCatalog(r)){ if(!silent) showToast('✅ تم تحديث الكتالوج من الشيت'); return true; }
+  } catch(e){ if(!silent) showToast('⚠️ تعذر الوصول للشيت — العمل محلياً', 'warn'); }
+  return false;
+}
+async function testCloudConnection(){
+  try {
+    const r = await cloudCall({ action: 'ping' }, 12000);
+    showToast(r && r.ok ? '✅ الاتصال بالشيت يعمل' : '❌ رد غير متوقع من الشيت', r && r.ok ? 'success' : 'error');
+  } catch(e){ showToast('❌ فشل الاتصال — تحقق من الرابط والنشر (Anyone)', 'error'); }
+}
+async function cloudPushSheet(sheet, rows){
+  const c = cloudCfg();
+  if(!c.enabled || !c.url || !c.secret) return { ok: false, error: 'cloud-off' };
+  const CH = 20;
+  let pushed = 0;
+  for(let i = 0; i < rows.length; i += CH){
+    const chunk = rows.slice(i, i + CH);
+    const r = await cloudCall({ action: 'adminPush', secret: c.secret, sheet, rows: JSON.stringify(chunk) }, 20000);
+    if(!r || !r.ok) throw new Error((r && r.error) || 'push-failed');
+    pushed += chunk.length;
+  }
+  return { ok: true, pushed };
+}
+async function cloudPushCatalog(){
+  try {
+    const parts = [];
+    parts.push(await cloudPushSheet('courses', DB.courses));
+    parts.push(await cloudPushSheet('contents', DB.contents));
+    parts.push(await cloudPushSheet('exams', DB.exams));
+    parts.push(await cloudPushSheet('codes', DB.codes));
+    parts.push(await cloudPushSheet('announcements', DB.announcements));
+    const n = parts.reduce((s, x) => s + (x.pushed || 0), 0);
+    showToast('✅ تم رفع ' + n + ' سجلاً للشيت المركزي');
+  } catch(e){ showToast('❌ فشل الرفع: ' + String(e.message || e), 'error'); }
+}
+async function cloudPullToLocal(){
+  try {
+    const c = cloudCfg();
+    const r = await cloudCall({ action: 'adminPull', secret: c.secret }, 25000);
+    if(!r || !r.ok || !r.dump) throw new Error((r && r.error) || 'pull-failed');
+    const d = r.dump;
+    if(d.courses) DB.courses = d.courses;
+    if(d.contents) DB.contents = d.contents;
+    if(d.exams) DB.exams = d.exams;
+    if(d.codes) DB.codes = d.codes;
+    if(d.students) DB.students = d.students;
+    if(d.attempts) DB.examAttempts = d.attempts;
+    if(d.receipts) DB.receipts = d.receipts;
+    if(d.announcements) DB.announcements = d.announcements;
+    saveDB();
+    renderAdminSection(adminSectionState);
+    showToast('✅ تم سحب نسخة الشيت إلى هذا الجهاز');
+  } catch(e){ showToast('❌ فشل السحب: ' + String(e.message || e), 'error'); }
+}
+async function cloudPushOne(sheet, row){
+  try { await cloudPushSheet(sheet, [row]); }
+  catch(e){ /* يُتجاهل — تبقى محلياً وتُرفع مع الرفع الشامل */ }
+}
+
 function boot(){
   const migrated = loadDB();
   fillGradeSelect('newStudentGrade', false);
   fillGradeSelect('editStudentGrade', false);
+  try { renderCloudStatus(); } catch(e){}
+  // تحديث الكتالوج من الشيت في الخلفية (لا يمنع الدخول)
+  try {
+    const cc = cloudCfg();
+    if(cc.enabled && cc.url) setTimeout(() => { cloudRefreshCatalog(true).then(ok => { if(ok && currentUser && currentUser.type === 'student') showStudentSection(studentSectionState || 'home'); }); }, 1200);
+  } catch(e){}
   // استعادة الجلسة
   const sess = getSession();
   if(sess){
